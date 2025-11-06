@@ -471,7 +471,8 @@ def upsert_product_data(
     """
     DISPATCHER: Routes data to the single-variant or multi-variant handler.
     """
-    
+    print(product_data)
+    print(variants)
     # --- Multi-Variant Product ---
     if variants:
         target_sku = variants[0].get("Variant SKU")
@@ -1163,6 +1164,8 @@ def scrape_products_all():
     })
     stats_df = pd.DataFrame(stats)
     stats_df.to_csv('../data/kbeauty_stats.csv', index=False)
+    prod_stats_df = pd.DataFrame(prod_stats)
+    prod_stats_df.to_csv('../data/kbeauty_prod_stats.csv', index=False)
 
     driver.quit()
     if conn:
