@@ -583,7 +583,7 @@ def scrape_products_all():
 
     # Parse single product data
     def parse_product(prod_soup, cat, url, cat_name):
-            if prod_soup:
+            if prod_soup and prod_soup.select_one(NAME):
                 name = prod_soup.select_one(NAME).text.strip()
                 
 
