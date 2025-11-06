@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import sql, extras
 import sys
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, List
 
 load_dotenv()
 
@@ -67,8 +67,8 @@ headers = {
     "DNT": "0"
 }
 
-PRODUCT_TABLE = 'Product_DB'
-VARIANT_LOOKUP_TABLE = 'Variant_DB'
+PRODUCT_TABLE = 'product_db'
+VARIANT_LOOKUP_TABLE = 'variant_db'
 
 # Note: I am assuming the connection and transaction (conn) is managed by the caller,
 # and this function only executes queries and does NOT manage the connection itself.
@@ -389,7 +389,7 @@ def upsert_multi_variant(
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 
                 {}, {}, {}, {}, {}, {}, 
-                {}, {}, {}, {}, {}
+                {}, {}, {}, {}
             )
             RETURNING product_id;
         """).format(
@@ -479,7 +479,7 @@ def upsert_product_data(
             print("Error: Single-variant product is missing 'Variant SKU'. Aborting.")
             return None, None
             
-        return upsert_multi_variant(product_data, variants, target_sku, cursor)
+        return upsert_multi_variant(product_data, variants, cursor)
 
     # --- Single-Variant Product ---
     else:
@@ -824,22 +824,22 @@ def scrape_products_all():
 
 
 
-            return { # Add product data as a single row
+                return { # Add product data as a single row
 
-                "cat_name": cat_name,
-                "Title": name,
-                "Variant SKU" : sku,
-                "Image Src": image_url,
-                "Body (HTML)": desc,
-                "Variant Barcode": sku,
-                "Variant Image": '',
-                "Variant Price": price,
-                "Variant Compare At Price": compare_price,
-                "Vendor": "KBeauty",
-                "Option1 name": "",
-                "Option1 value": "",
+                    "cat_name": cat_name,
+                    "Title": name,
+                    "Variant SKU" : sku,
+                    "Image Src": image_url,
+                    "Body (HTML)": desc,
+                    "Variant Barcode": sku,
+                    "Variant Image": '',
+                    "Variant Price": price,
+                    "Variant Compare At Price": compare_price,
+                    "Vendor": "KBeauty",
+                    "Option1 name": "",
+                    "Option1 value": "",
 
-            }
+                }
     # Parse product variant data if any
     
     def parse_variant(url, driver):
@@ -1128,7 +1128,8 @@ def scrape_products_all():
                 prod_debug_file.write(debug_message)
             continue
 
-    
+        if not product:
+            continue 
         
         if prod_soup.select("div[class='product__controls-group product__variants-wrapper product__block product__block--medium']"):
             
@@ -1146,10 +1147,11 @@ def scrape_products_all():
             product_to_save.extend(variants)
             variants_list = variants
             db_status, product_id = upsert_product_data(product, variants_list, cursor)
-    
+            conn.commit()
         else:
             product_to_save = [product]
             db_status, product_id = upsert_product_data(product, [], cursor)
+            conn.commit()
         
         product_count += 1
         prod_stats.append({'url': url, 'status': db_status, 'product_id': product_id, 'product_count': product_count})
@@ -1159,7 +1161,8 @@ def scrape_products_all():
         'product_count': product_count,
         'url_count': url_count,
     })
-    stats.to_csv('../data/kbeauty_stats.csv', index=False)
+    stats_df = pd.DataFrame(stats)
+    stats_df.to_csv('../data/kbeauty_stats.csv', index=False)
 
     driver.quit()
     if conn:

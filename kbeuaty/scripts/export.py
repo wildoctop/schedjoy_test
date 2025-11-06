@@ -26,8 +26,8 @@ DB_CONFIG = {
 }
 
 # Define table names
-PRODUCT_TABLE = "Product_DB"
-VARIANT_TABLE = "Variant_DB"
+PRODUCT_TABLE = "product_db"
+VARIANT_TABLE = "variant_db"
 
 # Output folder setup
 OUTPUT_DIR = "../data"
