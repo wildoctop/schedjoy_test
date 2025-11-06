@@ -73,38 +73,27 @@ VARIANT_LOOKUP_TABLE = 'Variant_DB'
 # Note: I am assuming the connection and transaction (conn) is managed by the caller,
 # and this function only executes queries and does NOT manage the connection itself.
 
-def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[str], Optional[int]]:
-    """
-    Upserts product and variant data into PostgreSQL tables (Product_DB and Variant_DB).
-    It expects the cursor to be managed by the calling function/context.
-    """
-    
-    target_sku = product_data.get("Variant SKU")
-    
-    if not target_sku:
-        print("Error: Product data is missing 'SKU'. Aborting.")
-        return None, None
+def upsert_single_variant(
+    product_data: Dict[str, Any], 
+    target_sku: str, 
+    cursor
+) -> Tuple[Optional[str], Optional[int]]:
 
-    select_query = sql.SQL("""
-        SELECT product_id 
-        FROM {} 
-        WHERE sku = {}
-    """).format(
+    # A. LOOKUP by SKU
+    select_query = sql.SQL("SELECT product_id FROM {} WHERE sku = {}").format(
         sql.Identifier(PRODUCT_TABLE),
         sql.Literal(target_sku)
     )
-    
     cursor.execute(select_query)
     result = cursor.fetchone()
-    
     product_id = result[0] if result else None
     
-    # Placeholder for status value
     db_status = None
-    
-    # --- B. UPDATE LOGIC (If product_id exists) ---
+
+    # --- B. UPDATE LOGIC (If product_id exists - Rule 2) ---
     if product_id:
         status_to_set = 'UPD'
+        db_status = 'UPD'
 
         # 1. Product Table UPDATE
         update_product_query = sql.SQL("""
@@ -114,100 +103,87 @@ def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[
                 descr = {}, cert = {}, opt_1 = {}, opt_2 = {}, opt_3 = {}, tags = {}, 
                 product_category = {}, type = {}, vendor = {}, inventory_tracker = {}, 
                 inventory_quantity = {}, debug_1 = {}, debug_2 = {}, debug_3 = {},
-                url_handle = {}, status = {} 
+                handle = {}, status = {} 
             WHERE product_id = {}
         """).format(
             sql.Identifier(PRODUCT_TABLE),
-            # Product Data
-            sql.Literal(product_data.get("cat", "")),
-            sql.Literal(product_data.get("url", "")), 
-            sql.Literal(product_data.get("cat_name", "")),
-            sql.Literal(product_data.get("name", "")),   # 'name' maps to 'title'
-            sql.Literal(product_data.get("name", "")),
-            sql.Literal(product_data.get("image_url", "")),
-            sql.Literal(product_data.get("desc", "")),   # value from 'desc' goes into 'descr'
-            sql.Literal(product_data.get("cert", "")),
-            sql.Literal(product_data.get("opt_1", "")),
-            sql.Literal(product_data.get("opt_2", "")),
-            sql.Literal(product_data.get("opt_3", "")),
-            sql.Literal(product_data.get("tags", "")),
-            sql.Literal(product_data.get("product_category", "")),
-            sql.Literal(product_data.get("type", "")),
-            sql.Literal(product_data.get("vendor", "")),
-            sql.Literal(product_data.get("inventory_tracker", "")),
-            sql.Literal(product_data.get("inventory_quantity", "")), # Pass None for non-integer if conversion fails
-            sql.Literal(product_data.get("debug_1", "")),  
-            sql.Literal(product_data.get("debug_2", "")),
-            sql.Literal(product_data.get("debug_3", "")),
-            sql.Literal(product_data.get("handle", "")), 
+            sql.Literal(product_data.get("cat", None)),
+            sql.Literal(product_data.get("url", None)), 
+            sql.Literal(product_data.get("cat_name", None)),
+            sql.Literal(product_data.get("name", None)),
+            sql.Literal(product_data.get("Variant SKU", None)), # Use Variant SKU for product.sku
+            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("cert", None)),
+            sql.Literal(product_data.get("opt_1", None)),
+            sql.Literal(product_data.get("opt_2", None)),
+            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("tags", None)),
+            sql.Literal(product_data.get("product_category", None)),
+            sql.Literal(product_data.get("type", None)),
+            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("inventory_tracker", None)),
+            sql.Literal(product_data.get("inventory_quantity", None)), # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("debug_1", None)),
+            sql.Literal(product_data.get("debug_2", None)),
+            sql.Literal(product_data.get("debug_3", None)),
+            sql.Literal(product_data.get("handle", None)), 
             sql.Literal(status_to_set),
-            # WHERE clause
             sql.Literal(product_id)
         )
         cursor.execute(update_product_query)
 
-        # 2. Variant Table UPSERT (ON CONFLICT using var_is, which is set to target_sku)
-        update_variant_query = sql.SQL("""
+        # 2. Variant Table UPSERT (for the single variant, using target_sku as var_id)
+        upsert_variant_query = sql.SQL("""
             INSERT INTO {} (
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
                 price, cost, compare, upc, weight, weight_grams, published, status, 
                 debug_1, debug_2, debug_3
             )
             VALUES (
-                {}, {}, {}, {}, {}, {}, {}, {}, 
-                COALESCE(NULLIF({}, ''), '0.00')::NUMERIC(10,2), 
-                COALESCE(NULLIF({}, ''), '0.00')::NUMERIC(10,2),
-                COALESCE(NULLIF({}, ''), '0.00')::NUMERIC(10,2),
-                {}, {}, {}, {}, {}, {}, {}, {}
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
             )
             ON CONFLICT (var_id) DO UPDATE SET 
                 var_image_url = EXCLUDED.var_image_url,
-                price = EXCLUDED.price,
-                cost = EXCLUDED.cost,
-                compare = EXCLUDED.compare,
-                upc = EXCLUDED.upc,
-                weight = EXCLUDED.weight,
-                published = EXCLUDED.published,
-                status = EXCLUDED.status,
-                debug_1 = EXCLUDED.debug_1,
-                debug_2 = EXCLUDED.debug_2,
-                debug_3 = EXCLUDED.debug_3;
+                price = EXCLUDED.price, cost = EXCLUDED.cost, compare = EXCLUDED.compare,
+                upc = EXCLUDED.upc, weight = EXCLUDED.weight, published = EXCLUDED.published,
+                status = EXCLUDED.status;
         """).format(
             sql.Identifier(VARIANT_LOOKUP_TABLE),
-            # Variant VALUES
-            sql.Literal(target_sku), # var_is (Primary Key)
+            # Variant VALUES (using single product_data dict)
+            sql.Literal(target_sku), 
             sql.Literal(product_id),
-            sql.Literal(product_data.get("handle", "")),
-            sql.Literal(product_data.get("image_url", "")),
-            sql.Literal(target_sku), # sku
-            sql.Literal(product_data.get("opt_1_val", "")),
-            sql.Literal(product_data.get("opt_2_val", "")),
-            sql.Literal(product_data.get("opt_3_val", "")),
-            sql.Literal(product_data.get("price", "")),
-            sql.Literal(product_data.get("cost", "")),
-            sql.Literal(product_data.get("compare", "")),
-            sql.Literal(product_data.get("upc", "")),
-            sql.Literal(product_data.get("weight", "")),
-            sql.Literal(product_data.get("weight_grams", "")),
-            sql.Literal(product_data.get("published", "")),
+            sql.Literal(product_data.get("handle", None)),
+            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(target_sku),
+            sql.Literal(product_data.get("opt_1_val", None)),
+            sql.Literal(product_data.get("opt_2_val", None)),
+            sql.Literal(product_data.get("opt_3_val", None)),
+            sql.Literal(product_data.get("price", None)),        # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("cost", None)),         # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("compare", None)),      # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("upc", None)),
+            sql.Literal(product_data.get("weight", None)),       # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("weight_grams", None)), # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("published", None)),
             sql.Literal(status_to_set),
-            sql.Literal(product_data.get("debug_1", "")),
-            sql.Literal(product_data.get("debug_2", "")),
-            sql.Literal(product_data.get("debug_3", ""))
+            sql.Literal(product_data.get("debug_1", None)),
+            sql.Literal(product_data.get("debug_2", None)),
+            sql.Literal(product_data.get("debug_3", None))
         )
-        cursor.execute(update_variant_query)
-        db_status = 'UPD'
-    
-    # --- C. INSERT LOGIC (If product_id does NOT exist) ---
+        cursor.execute(upsert_variant_query)
+        
+    # --- C. INSERT LOGIC (If product_id does NOT exist - Rule 1) ---
     else:
         status_to_set = 'NEW'
+        db_status = 'NEW'
         
-        # 1. Product Table INSERT (Corrected column names and added missing ones)
+        # 1. Product Table INSERT (RETURNING product_id)
         insert_product_query = sql.SQL("""
             INSERT INTO {} (
                 cat, url, cat_name, title, sku, image_url, descr, cert, opt_1, opt_2, opt_3, 
                 tags, product_category, type, vendor, inventory_tracker, inventory_quantity, 
-                debug_1, debug_2, debug_3, url_handle, status
+                debug_1, debug_2, debug_3, handle, status
             )
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 
@@ -217,34 +193,33 @@ def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[
             RETURNING product_id;
         """).format(
             sql.Identifier(PRODUCT_TABLE),
-            # Product Values
-            sql.Literal(product_data.get("cat", "")),
-            sql.Literal(product_data.get("url", "")),
-            sql.Literal(product_data.get("cat_name", "")),
-            sql.Literal(product_data.get("name", "")),
-            sql.Literal(product_data.get("name", "")),
-            sql.Literal(product_data.get("image_url", "")),
-            sql.Literal(product_data.get("desc", "")), # Data value that goes into 'descr' column
-            sql.Literal(product_data.get("cert", "")),
-            sql.Literal(product_data.get("opt_1", "")),
-            sql.Literal(product_data.get("opt_2", "")),
-            sql.Literal(product_data.get("opt_3", "")),
-            sql.Literal(product_data.get("tags", "")),
-            sql.Literal(product_data.get("product_category", "")),
-            sql.Literal(product_data.get("type", "")),
-            sql.Literal(product_data.get("vendor", "")),
-            sql.Literal(product_data.get("inventory_tracker", "")),
-            sql.Literal(product_data.get("inventory_quantity", "")),
-            sql.Literal(product_data.get("brand", "")),
-            sql.Literal(product_data.get("debug_2", "")),
-            sql.Literal(product_data.get("debug_3", "")),
-            sql.Literal(product_data.get("handle", "")),
+            sql.Literal(product_data.get("cat", None)),
+            sql.Literal(product_data.get("url", None)),
+            sql.Literal(product_data.get("cat_name", None)),
+            sql.Literal(product_data.get("name", None)),
+            sql.Literal(product_data.get("Variant SKU", None)), # Use Variant SKU for product.sku
+            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("cert", None)),
+            sql.Literal(product_data.get("opt_1", None)),
+            sql.Literal(product_data.get("opt_2", None)),
+            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("tags", None)),
+            sql.Literal(product_data.get("product_category", None)),
+            sql.Literal(product_data.get("type", None)),
+            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("inventory_tracker", None)),
+            sql.Literal(product_data.get("inventory_quantity", None)), # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("debug_1", None)),
+            sql.Literal(product_data.get("debug_2", None)),
+            sql.Literal(product_data.get("debug_3", None)),
+            sql.Literal(product_data.get("handle", None)),
             sql.Literal(status_to_set)
         )
         cursor.execute(insert_product_query)
         product_id = cursor.fetchone()[0] 
         
-        # 2. Variant Table INSERT (Full column set)
+        # 2. Variant Table INSERT (for the single variant)
         insert_variant_query = sql.SQL("""
             INSERT INTO {} (
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
@@ -252,44 +227,268 @@ def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[
                 debug_1, debug_2, debug_3
             )
             VALUES (
-                {}, {}, {}, {}, {}, {}, {}, {}, 
-                COALESCE(NULLIF({}, ''), '0.00')::NUMERIC(10,2), 
-                COALESCE(NULLIF({}, ''), '0.00')::NUMERIC(10,2),
-                COALESCE(NULLIF({}, ''), '0.00')::NUMERIC(10,2),
-                {}, {}, {}, {}, {}, {}, {}, {}
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
             );
         """).format(
             sql.Identifier(VARIANT_LOOKUP_TABLE),
-            # Variant Values
-            sql.Literal(target_sku), # var_id (Primary Key)
+            sql.Literal(target_sku),
             sql.Literal(product_id),
-            sql.Literal(product_data.get("handle", "")),
-            sql.Literal(product_data.get("image_url", "")),
-            sql.Literal(target_sku), # sku
-            sql.Literal(product_data.get("opt_1_val", "")),
-            sql.Literal(product_data.get("opt_2_val", "")),
-            sql.Literal(product_data.get("opt_3_val", "")),
-            sql.Literal(product_data.get("price", "")),
-            sql.Literal(product_data.get("cost", "")),
-            sql.Literal(product_data.get("compare", "")),
-            sql.Literal(product_data.get("upc", "")),
-            sql.Literal(product_data.get("weight", "")),
-            sql.Literal(product_data.get("weight_grams", "")),
-            sql.Literal(product_data.get("published", "")),
+            sql.Literal(product_data.get("handle", None)),
+            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(target_sku),
+            sql.Literal(product_data.get("opt_1_val", None)),
+            sql.Literal(product_data.get("opt_2_val", None)),
+            sql.Literal(product_data.get("opt_3_val", None)),
+            sql.Literal(product_data.get("price", None)),
+            sql.Literal(product_data.get("cost", None)),
+            sql.Literal(product_data.get("compare", None)),
+            sql.Literal(product_data.get("upc", None)),
+            sql.Literal(product_data.get("weight", None)),
+            sql.Literal(product_data.get("weight_grams", None)),
+            sql.Literal(product_data.get("published", None)),
             sql.Literal(status_to_set),
-            sql.Literal(product_data.get("debug_1", "")),
-            sql.Literal(product_data.get("debug_2", "")),
-            sql.Literal(product_data.get("debug_3", ""))
+            sql.Literal(product_data.get("debug_1", None)),
+            sql.Literal(product_data.get("debug_2", None)),
+            sql.Literal(product_data.get("debug_3", None))
         )
         cursor.execute(insert_variant_query)
+
+    return db_status, product_id
+
+# --- HELPER FUNCTION 2: Multi-Variant Logic (Rules 3 & 4) ---
+
+def upsert_multi_variant(
+    product_data: Dict[str, Any], 
+    variants: List[Dict[str, Any]], 
+    cursor
+) -> Tuple[Optional[str], Optional[int]]:
+
+    # A. LOOKUP by Handle
+    variant_skus = [v.get("Variant SKU") for v in variants if v.get("Variant SKU")]
+
+    product_id = None
+    
+    if variant_skus:
+        # 2. Build the WHERE var_id IN (...) clause from the list of SKUs
+        sku_literals = sql.SQL(', ').join(sql.Literal(sku) for sku in variant_skus)
+        
+        select_query = sql.SQL("""
+            SELECT product_id 
+            FROM {} 
+            WHERE var_id IN ({})
+            LIMIT 1
+        """).format(
+            sql.Identifier(VARIANT_LOOKUP_TABLE),
+            sku_literals
+        )
+        
+        cursor.execute(select_query)
+        result = cursor.fetchone()
+        product_id = result[0] if result else None
+    
+    db_status = None
+
+    # --- UPD PATH (Rule 3: Product exists, Update product and variants) ---
+    if product_id:
+        status_to_set = 'UPD'
+        db_status = 'UPD'
+
+        # 1. Update Product Table
+        update_product_query = sql.SQL("""
+            UPDATE {} SET 
+                cat = {}, url = {}, cat_name = {}, title = {}, image_url = {}, 
+                descr = {}, cert = {}, opt_1 = {}, opt_2 = {}, opt_3 = {}, 
+                tags = {}, product_category = {}, type = {}, vendor = {}, 
+                inventory_tracker = {}, inventory_quantity = {}, debug_1 = {}, 
+                debug_2 = {}, debug_3 = {}, status = {} 
+            WHERE product_id = {}
+        """).format(
+            sql.Identifier(PRODUCT_TABLE),
+            sql.Literal(product_data.get("cat", None)),
+            sql.Literal(product_data.get("url", None)), 
+            sql.Literal(product_data.get("cat_name", None)),
+            sql.Literal(product_data.get("name", None)),
+            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("cert", None)),
+            sql.Literal(product_data.get("opt_1", None)),
+            sql.Literal(product_data.get("opt_2", None)),
+            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("tags", None)),
+            sql.Literal(product_data.get("product_category", None)),
+            sql.Literal(product_data.get("type", None)),
+            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("inventory_tracker", None)),
+            sql.Literal(product_data.get("inventory_quantity", None)),
+            sql.Literal(product_data.get("debug_1", None)),
+            sql.Literal(product_data.get("debug_2", None)),
+            sql.Literal(product_data.get("debug_3", None)),
+            sql.Literal(status_to_set),
+            sql.Literal(product_id)
+        )
+        cursor.execute(update_product_query)
+
+        # 2. Loop and UPSERT Variants (Update existing, Insert new)
+        for variant in variants:
+            var_sku = variant.get("Variant SKU")
+            if not var_sku:
+                print(f"Warning: Variant  is missing SKU. Skipping.")
+                continue
+
+            upsert_variant_query = sql.SQL("""
+                INSERT INTO {} (
+                    var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
+                    price, cost, compare, upc, weight, weight_grams, published, status, 
+                    debug_1, debug_2, debug_3
+                )
+                VALUES (
+                    {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+                )
+                ON CONFLICT (var_id) DO UPDATE SET 
+                    var_image_url = EXCLUDED.var_image_url,
+                    price = EXCLUDED.price, cost = EXCLUDED.cost, compare = EXCLUDED.compare,
+                    upc = EXCLUDED.upc, weight = EXCLUDED.weight, published = EXCLUDED.published,
+                    status = EXCLUDED.status, debug_1 = EXCLUDED.debug_1, debug_2 = EXCLUDED.debug_2,
+                    debug_3 = EXCLUDED.debug_3;
+            """).format(
+                sql.Identifier(VARIANT_LOOKUP_TABLE),
+                sql.Literal(var_sku),
+                sql.Literal(product_id),
+                sql.Literal(variant.get("handle", None)),
+                sql.Literal(variant.get("image_url", None)),
+                sql.Literal(var_sku),
+                sql.Literal(variant.get("opt_1_val", None)),
+                sql.Literal(variant.get("opt_2_val", None)),
+                sql.Literal(variant.get("opt_3_val", None)),
+                sql.Literal(variant.get("price", None)),
+                sql.Literal(variant.get("cost", None)),
+                sql.Literal(variant.get("compare", None)),
+                sql.Literal(variant.get("upc", None)),
+                sql.Literal(variant.get("weight", None)),
+                sql.Literal(variant.get("weight_grams", None)),
+                sql.Literal(variant.get("published", None)),
+                sql.Literal(status_to_set),
+                sql.Literal(variant.get("debug_1", None)),
+                sql.Literal(variant.get("debug_2", None)),
+                sql.Literal(variant.get("debug_3", None))
+            )
+            cursor.execute(upsert_variant_query)
+
+    # --- NEW PATH (Rule 4: Product does NOT exist, Insert everything) ---
+    else:
+        status_to_set = 'NEW'
         db_status = 'NEW'
 
-    # --- D. Finalize ---
-    # NOTE: Since the cursor is passed in, we assume the caller will commit/rollback and close.
-    # The original commit/close logic is commented out to avoid closing the caller's resources.
-    # conn.commit()
-    # cursor.close() 
+        # 1. Product Table INSERT (RETURNING product_id)
+        insert_product_query = sql.SQL("""
+            INSERT INTO {} (
+                cat, url, cat_name, title, image_url, descr, cert, opt_1, opt_2, opt_3, 
+                tags, product_category, type, vendor, inventory_tracker, inventory_quantity, 
+                debug_1, debug_2, debug_3, handle, status
+            )
+            VALUES (
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 
+                {}, {}, {}, {}, {}, {}, 
+                {}, {}, {}, {}, {}
+            )
+            RETURNING product_id;
+        """).format(
+            sql.Identifier(PRODUCT_TABLE),
+            sql.Literal(product_data.get("cat", None)),
+            sql.Literal(product_data.get("url", None)),
+            sql.Literal(product_data.get("cat_name", None)),
+            sql.Literal(product_data.get("name", None)),
+            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("cert", None)),
+            sql.Literal(product_data.get("opt_1", None)),
+            sql.Literal(product_data.get("opt_2", None)),
+            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("tags", None)),
+            sql.Literal(product_data.get("product_category", None)),
+            sql.Literal(product_data.get("type", None)),
+            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("inventory_tracker", None)),
+            sql.Literal(product_data.get("inventory_quantity", None)),
+            sql.Literal(product_data.get("debug_1", None)),
+            sql.Literal(product_data.get("debug_2", None)),
+            sql.Literal(product_data.get("debug_3", None)),
+            sql.Literal(product_data.get("handle", None)),
+            sql.Literal(status_to_set)
+        )
+        cursor.execute(insert_product_query)
+        product_id = cursor.fetchone()[0] 
+        
+        # 2. Loop and INSERT Variants
+        for variant in variants:
+            var_sku = variant.get("Variant SKU")
+            if not var_sku:
+                print(f"Warning: Variant is missing SKU. Skipping.")
+                continue
+
+            insert_variant_query = sql.SQL("""
+                INSERT INTO {} (
+                    var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
+                    price, cost, compare, upc, weight, weight_grams, published, status, 
+                    debug_1, debug_2, debug_3
+                )
+                VALUES (
+                    {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+                );
+            """).format(
+                sql.Identifier(VARIANT_LOOKUP_TABLE),
+                sql.Literal(var_sku),
+                sql.Literal(product_id),
+                sql.Literal(variant.get("handle", None)),
+                sql.Literal(variant.get("image_url", None)),
+                sql.Literal(var_sku),
+                sql.Literal(variant.get("opt_1_val", None)),
+                sql.Literal(variant.get("opt_2_val", None)),
+                sql.Literal(variant.get("opt_3_val", None)),
+                sql.Literal(variant.get("price", None)),
+                sql.Literal(variant.get("cost", None)),
+                sql.Literal(variant.get("compare", None)),
+                sql.Literal(variant.get("upc", None)),
+                sql.Literal(variant.get("weight", None)),
+                sql.Literal(variant.get("weight_grams", None)),
+                sql.Literal(variant.get("published", None)),
+                sql.Literal(status_to_set),
+                sql.Literal(variant.get("debug_1", None)),
+                sql.Literal(variant.get("debug_2", None)),
+                sql.Literal(variant.get("debug_3", None))
+            )
+            cursor.execute(insert_variant_query)
+            
     return db_status, product_id
+
+# --- MAIN DISPATCHER FUNCTION ---
+
+def upsert_product_data(
+    product_data: Dict[str, Any], 
+    variants: List[Dict[str, Any]], 
+    cursor
+) -> Tuple[Optional[str], Optional[int]]:
+    """
+    DISPATCHER: Routes data to the single-variant or multi-variant handler.
+    """
+    
+    # --- Multi-Variant Product ---
+    if variants:
+        target_sku = variants[0].get("Variant SKU")
+        if not target_sku:
+            print("Error: Single-variant product is missing 'Variant SKU'. Aborting.")
+            return None, None
+            
+        return upsert_multi_variant(product_data, variants, target_sku, cursor)
+
+    # --- Single-Variant Product ---
+    else:
+        target_sku = product_data.get("Variant SKU")
+        if not target_sku:
+            print("Error: Single-variant product is missing 'Variant SKU'. Aborting.")
+            return None, None
+            
+        return upsert_single_variant(product_data, target_sku, cursor)
 
 
 def debug(urls_stats, prod_stats):
@@ -945,10 +1144,13 @@ def scrape_products_all():
         
             product_to_save = [product]
             product_to_save.extend(variants)
+            variants_list = variants
+            db_status, product_id = upsert_product_data(product, variants_list, cursor)
     
         else:
             product_to_save = [product]
-        db_status, product_id = upsert_product_data(product, cursor)
+            db_status, product_id = upsert_product_data(product, [], cursor)
+        
         product_count += 1
         prod_stats.append({'url': url, 'status': db_status, 'product_id': product_id, 'product_count': product_count})
     
