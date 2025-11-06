@@ -38,7 +38,7 @@ DB_CONFIG = {
 
 
 # TRUE - IF URL LIST .CSV FILE IS READY
-CSV_READY = False
+CSV_READY = True
 CSV = '../data/kbeauty_url.csv'
 PROD_DEBUG_FILE = '../data/debug_kbeauty.log'
 URL_DEBUG_FILE = '../data/debug_kbeauty_url.log'
@@ -79,7 +79,7 @@ def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[
     It expects the cursor to be managed by the calling function/context.
     """
     
-    target_sku = product_data.get("SKU")
+    target_sku = product_data.get("Variant SKU")
     
     if not target_sku:
         print("Error: Product data is missing 'SKU'. Aborting.")
@@ -135,7 +135,7 @@ def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[
             sql.Literal(product_data.get("type", "")),
             sql.Literal(product_data.get("vendor", "")),
             sql.Literal(product_data.get("inventory_tracker", "")),
-            sql.Literal(product_data.get("inventory_quantity", None)), # Pass None for non-integer if conversion fails
+            sql.Literal(product_data.get("inventory_quantity", "")), # Pass None for non-integer if conversion fails
             sql.Literal(product_data.get("debug_1", "")),  
             sql.Literal(product_data.get("debug_2", "")),
             sql.Literal(product_data.get("debug_3", "")),
@@ -234,7 +234,7 @@ def upsert_product_data(product_data: Dict[str, Any], cursor) -> Tuple[Optional[
             sql.Literal(product_data.get("type", "")),
             sql.Literal(product_data.get("vendor", "")),
             sql.Literal(product_data.get("inventory_tracker", "")),
-            sql.Literal(product_data.get("inventory_quantity", None)),
+            sql.Literal(product_data.get("inventory_quantity", "")),
             sql.Literal(product_data.get("brand", "")),
             sql.Literal(product_data.get("debug_2", "")),
             sql.Literal(product_data.get("debug_3", "")),
@@ -397,7 +397,7 @@ def extract_sku_from_shopify_meta_no_vars(soup):
  
 # Save product URL list to CSV 
 def url_to_csv(products, filename='../data/kbeauty_url.csv'):
-            fieldnames = ['cat', 'url']
+            fieldnames = ['cat', 'url', 'name']
             file_exists = os.path.isfile(filename)
             
             with open(filename, 'a', newline='', encoding='utf-8') as f:
@@ -916,10 +916,10 @@ def scrape_products_all():
         print(f'Parsing product {url}')
             
         prod_html = fetch_page(url, driver)
-        
-        prod_soup = bs(prod_html, "lxml")
+        if prod_html:
+            prod_soup = bs(prod_html, "lxml")
         if prod_soup:
-            product = parse_product(prod_soup, cat)
+            product = parse_product(prod_soup, cat, url, name)
         
 
         else:
