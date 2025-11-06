@@ -395,6 +395,7 @@ def upsert_multi_variant(
                 sql.Literal(prepare_data_for_sql(variant.get("Option2 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Option3 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Price", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("cost", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Compare At Price", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Barcode", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("weight", None))),

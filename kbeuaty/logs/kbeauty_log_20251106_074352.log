@@ -1,0 +1,29 @@
+--- Pipeline Start (using Poetry): Thu Nov  6 07:43:52 AM UTC 2025 ---
+Log file: ../logs/kbeauty_log_20251106_074352.log
+---------------------------------
+Starting Step 1: Running scraper_kbeauty.py
+prev: 
+current: <selenium.webdriver.remote.webelement.WebElement (session="6d4d6213235ab7baf877c4349d1c211d", element="f.BF788F8B9F1056AA000D002EB8235F5B.d.4ADB53A090FD508339807BA258F8312D.e.1122")>
+prev: <selenium.webdriver.remote.webelement.WebElement (session="6d4d6213235ab7baf877c4349d1c211d", element="f.BF788F8B9F1056AA000D002EB8235F5B.d.4ADB53A090FD508339807BA258F8312D.e.1122")>
+current: <selenium.webdriver.remote.webelement.WebElement (session="6d4d6213235ab7baf877c4349d1c211d", element="f.BF788F8B9F1056AA000D002EB8235F5B.d.4ADB53A090FD508339807BA258F8312D.e.1250")>
+Found 66 products
+Traceback (most recent call last):
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 970, in <module>
+    products = scrape_products_all()
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 896, in scrape_products_all
+    product_urls, urls_stats = get_product_urls(driver, url_count)
+                               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 569, in get_product_urls
+    url_to_csv(urls_to_save)
+    ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 407, in url_to_csv
+    writer.writerows(products)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/usr/lib/python3.13/csv.py", line 229, in writerows
+    return self.writer.writerows(map(self._dict_to_list, rowdicts))
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/csv.py", line 221, in _dict_to_list
+    raise ValueError("dict contains fields not in fieldnames: "
+                     + ", ".join([repr(x) for x in wrong_fields]))
+ValueError: dict contains fields not in fieldnames: 'name'
+FATAL ERROR (1): scraper_kbeauty.py failed.

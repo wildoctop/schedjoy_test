@@ -1,0 +1,10 @@
+--- Pipeline Start (using Poetry): Thu Nov  6 10:24:48 AM UTC 2025 ---
+Log file: ../logs/kbeauty_log_20251106_102448.log
+---------------------------------
+Starting Step 1: Running scraper_kbeauty.py
+Traceback (most recent call last):
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 262, in <module>
+    variants: List[Dict[str, Any]],
+              ^^^^
+NameError: name 'List' is not defined. Did you mean: 'list'?
+FATAL ERROR (1): scraper_kbeauty.py failed.

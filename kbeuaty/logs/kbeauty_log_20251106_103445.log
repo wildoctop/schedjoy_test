@@ -1,0 +1,46 @@
+--- Pipeline Start (using Poetry): Thu Nov  6 10:34:45 AM UTC 2025 ---
+Log file: ../logs/kbeauty_log_20251106_103445.log
+---------------------------------
+Starting Step 1: Running scraper_kbeauty.py
+{'cat': 'https://kbeauty.ca/collections/cream/products/cosrx-advanced-snail-92-all-in-one-cream', 'url': 'Cream', 'name': None}
+Parsing product https://kbeauty.ca/collections/cream/products/dr-althea-345-relief-cream-50ml
+Found 20 images
+Parsing product Cream
+Error fetching URL
+Found 20 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-deep-vita-c-capsule-cream-55g
+Found 38 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-pdrn-pink-collagen-capsule-cream-55g
+Found 18 images
+Parsing product https://kbeauty.ca/collections/cream/products/aestura-atobarrier-365-cream-80ml-renew
+Found 14 images
+Parsing product https://kbeauty.ca/collections/cream/products/cosrx-advanced-snail-peptide-eye-cream-25ml
+Found 14 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-age-r-booster-pro-1-free-silicone-mask-brush
+Found 24 images
+len(buttons) =  2
+buttons =  [<selenium.webdriver.remote.webelement.WebElement (session="707c25d9bec4fd8bd749612214d59897", element="f.AB1E7414AE7437EA3FD7E53E198AF66D.d.EF7DCC83D002D5E5FC7D0F52450DC5F5.e.1101")>, <selenium.webdriver.remote.webelement.WebElement (session="707c25d9bec4fd8bd749612214d59897", element="f.AB1E7414AE7437EA3FD7E53E198AF66D.d.EF7DCC83D002D5E5FC7D0F52450DC5F5.e.1102")>]
+[{'cat_name': '', 'Title': '', 'Variant SKU': '8800256114481', 'Image Src': '//kbeauty.ca/cdn/shop/files/Medicube_Beauty_device_-_AGE-R_BOOSTER_PRO_EX_PINK.webp?v=1747992130&width=1000', 'Body (HTML)': '', 'Variant Barcode': '8800256114481', 'Variant Image': '', 'Variant Price': '$249.95', 'Variant Compare At Price': '$499.00', 'Vendor': '', 'Option1 name': 'Color:', 'Option1 value': 'Pink'}]
+Traceback (most recent call last):
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 1172, in <module>
+    products = scrape_products_all()
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 1148, in scrape_products_all
+    db_status, product_id = upsert_product_data(product, variants_list, cursor)
+                            ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 482, in upsert_product_data
+    return upsert_multi_variant(product_data, variants, cursor)
+  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 395, in upsert_multi_variant
+    """).format(
+         ~~~~~~^
+        sql.Identifier(PRODUCT_TABLE),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<20 lines>...
+        sql.Literal(status_to_set)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/parser/.cache/pypoetry/virtualenvs/kbeauty-3Lsz9dQy-py3.13/lib/python3.13/site-packages/psycopg2/sql.py", line 250, in format
+    rv.append(args[autonum])
+              ~~~~^^^^^^^^^
+IndexError: tuple index out of range
+FATAL ERROR (1): scraper_kbeauty.py failed.

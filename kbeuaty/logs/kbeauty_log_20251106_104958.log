@@ -1,0 +1,50 @@
+--- Pipeline Start (using Poetry): Thu Nov  6 10:49:58 AM UTC 2025 ---
+Log file: ../logs/kbeauty_log_20251106_104958.log
+---------------------------------
+Starting Step 1: Running scraper_kbeauty.py
+{'cat': 'https://kbeauty.ca/collections/cream/products/cosrx-advanced-snail-92-all-in-one-cream', 'url': 'Cream', 'name': None}
+Parsing product https://kbeauty.ca/collections/cream/products/dr-althea-345-relief-cream-50ml
+Found 20 images
+Parsing product Cream
+Error fetching URL
+Found 20 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-deep-vita-c-capsule-cream-55g
+Found 38 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-pdrn-pink-collagen-capsule-cream-55g
+Found 18 images
+Parsing product https://kbeauty.ca/collections/cream/products/aestura-atobarrier-365-cream-80ml-renew
+Found 14 images
+Parsing product https://kbeauty.ca/collections/cream/products/cosrx-advanced-snail-peptide-eye-cream-25ml
+Found 14 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-age-r-booster-pro-1-free-silicone-mask-brush
+Found 24 images
+len(buttons) =  2
+buttons =  [<selenium.webdriver.remote.webelement.WebElement (session="d3815e09dad5db37a1b301e181918342", element="f.C876594546108C7225FF7239748EAB2D.d.1FAD1CE342DE2537358ED07D5C3B8773.e.1118")>, <selenium.webdriver.remote.webelement.WebElement (session="d3815e09dad5db37a1b301e181918342", element="f.C876594546108C7225FF7239748EAB2D.d.1FAD1CE342DE2537358ED07D5C3B8773.e.1119")>]
+[{'cat_name': '', 'Title': '', 'Variant SKU': '8800256114481', 'Image Src': '//kbeauty.ca/cdn/shop/files/Medicube_Beauty_device_-_AGE-R_BOOSTER_PRO_EX_PINK.webp?v=1747992130&width=1000', 'Body (HTML)': '', 'Variant Barcode': '8800256114481', 'Variant Image': '', 'Variant Price': '$249.95', 'Variant Compare At Price': '$499.00', 'Vendor': '', 'Option1 name': 'Color:', 'Option1 value': 'Pink'}]
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-triple-collagen-cream-4-0-50ml
+Found 18 images
+Parsing product https://kbeauty.ca/collections/cream/products/dr-althea-147-barrier-cream-50ml
+Found 20 images
+Parsing product https://kbeauty.ca/collections/cream/products/illiyoon-ceramide-ato-concentrate-cream-230ml
+Found 6 images
+Parsing product https://kbeauty.ca/collections/cream/products/cosrx-hyaluronic-acid-intensive-cream
+Found 14 images
+Parsing product https://kbeauty.ca/collections/cream/products/skin1004-madagascar-centella-travel-kit-box-150ml
+Found 26 images
+Parsing product https://kbeauty.ca/collections/cream/products/medicube-pdrn-pink-hyaluronic-moisturizing-cream-50ml
+Found 12 images
+Parsing product https://kbeauty.ca/collections/cream/products/ksecret-seoul-1988-cream-retinal-liposome-1-fermented-rice-50ml
+Found 30 images
+Parsing product https://kbeauty.ca/collections/cream/products/purito-seoul-mighty-bamboo-panthenol-cream-100ml
+Found 16 images
+Parsing product https://kbeauty.ca/collections/cream/products/anua-heartleaf-70-intense-calming-creml
+Parsing product https://kbeauty.ca/collections/cream/products/cosrx-the-retinol-0-1-cream-20ml
+Found 28 images
+Source URL list (urls_stats) is empty.
+Database connection closed.
+SUCCESS: scraper_kbeauty.py completed successfully.
+Starting Step 2: Running export.py
+No relevant variant data found for export. Exiting.
+SUCCESS: export.py completed successfully.
+---------------------------------
+Pipeline finished successfully: Thu Nov  6 10:50:44 AM UTC 2025
