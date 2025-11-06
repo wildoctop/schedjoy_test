@@ -110,18 +110,18 @@ def upsert_single_variant(
             sql.Literal(product_data.get("cat", None)),
             sql.Literal(product_data.get("url", None)), 
             sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("name", None)),
+            sql.Literal(product_data.get("Title", None)),
             sql.Literal(product_data.get("Variant SKU", None)), # Use Variant SKU for product.sku
-            sql.Literal(product_data.get("image_url", None)),
-            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("Image Src", None)),
+            sql.Literal(product_data.get("Body (HTML)", None)),
             sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("opt_1", None)),
-            sql.Literal(product_data.get("opt_2", None)),
-            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("Option1 name", None)),
+            sql.Literal(product_data.get("Option2 name", None)),
+            sql.Literal(product_data.get("Option3 name", None)),
             sql.Literal(product_data.get("tags", None)),
             sql.Literal(product_data.get("product_category", None)),
             sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("Vendor", None)),
             sql.Literal(product_data.get("inventory_tracker", None)),
             sql.Literal(product_data.get("inventory_quantity", None)), # IMPORTANT: Use None for numeric
             sql.Literal(product_data.get("debug_1", None)),
@@ -132,6 +132,8 @@ def upsert_single_variant(
             sql.Literal(product_id)
         )
         cursor.execute(update_product_query)
+
+
 
         # 2. Variant Table UPSERT (for the single variant, using target_sku as var_id)
         upsert_variant_query = sql.SQL("""
@@ -154,15 +156,15 @@ def upsert_single_variant(
             sql.Literal(target_sku), 
             sql.Literal(product_id),
             sql.Literal(product_data.get("handle", None)),
-            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(product_data.get("Image Src", None)),
             sql.Literal(target_sku),
-            sql.Literal(product_data.get("opt_1_val", None)),
-            sql.Literal(product_data.get("opt_2_val", None)),
-            sql.Literal(product_data.get("opt_3_val", None)),
-            sql.Literal(product_data.get("price", None)),        # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("Option1 value", None)),
+            sql.Literal(product_data.get("Option2 value", None)),
+            sql.Literal(product_data.get("Option3 value", None)),
+            sql.Literal(product_data.get("Variant Price", None)),        # IMPORTANT: Use None for numeric
             sql.Literal(product_data.get("cost", None)),         # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("compare", None)),      # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("upc", None)),
+            sql.Literal(product_data.get("Variant Compare At Price", None)),      # IMPORTANT: Use None for numeric
+            sql.Literal(product_data.get("Variant Barcode", None)),
             sql.Literal(product_data.get("weight", None)),       # IMPORTANT: Use None for numeric
             sql.Literal(product_data.get("weight_grams", None)), # IMPORTANT: Use None for numeric
             sql.Literal(product_data.get("published", None)),
@@ -172,6 +174,8 @@ def upsert_single_variant(
             sql.Literal(product_data.get("debug_3", None))
         )
         cursor.execute(upsert_variant_query)
+
+        
         
     # --- C. INSERT LOGIC (If product_id does NOT exist - Rule 1) ---
     else:
@@ -196,18 +200,18 @@ def upsert_single_variant(
             sql.Literal(product_data.get("cat", None)),
             sql.Literal(product_data.get("url", None)),
             sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("name", None)),
+            sql.Literal(product_data.get("Title", None)),
             sql.Literal(product_data.get("Variant SKU", None)), # Use Variant SKU for product.sku
-            sql.Literal(product_data.get("image_url", None)),
-            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("Image Src", None)),
+            sql.Literal(product_data.get("Body (HTML)", None)),
             sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("opt_1", None)),
-            sql.Literal(product_data.get("opt_2", None)),
-            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("Option1 name", None)),
+            sql.Literal(product_data.get("Option2 name", None)),
+            sql.Literal(product_data.get("Option3 name", None)),
             sql.Literal(product_data.get("tags", None)),
             sql.Literal(product_data.get("product_category", None)),
             sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("Vendor", None)),
             sql.Literal(product_data.get("inventory_tracker", None)),
             sql.Literal(product_data.get("inventory_quantity", None)), # IMPORTANT: Use None for numeric
             sql.Literal(product_data.get("debug_1", None)),
@@ -234,15 +238,15 @@ def upsert_single_variant(
             sql.Literal(target_sku),
             sql.Literal(product_id),
             sql.Literal(product_data.get("handle", None)),
-            sql.Literal(product_data.get("image_url", None)),
+            sql.Literal(product_data.get("Image Src", None)),
             sql.Literal(target_sku),
-            sql.Literal(product_data.get("opt_1_val", None)),
-            sql.Literal(product_data.get("opt_2_val", None)),
-            sql.Literal(product_data.get("opt_3_val", None)),
-            sql.Literal(product_data.get("price", None)),
+            sql.Literal(product_data.get("Option1 value", None)),
+            sql.Literal(product_data.get("Option2 value", None)),
+            sql.Literal(product_data.get("Option3 value", None)),
+            sql.Literal(product_data.get("Variant Price", None)),
             sql.Literal(product_data.get("cost", None)),
-            sql.Literal(product_data.get("compare", None)),
-            sql.Literal(product_data.get("upc", None)),
+            sql.Literal(product_data.get("Variant Compare At Price", None)),
+            sql.Literal(product_data.get("Variant Barcode", None)),
             sql.Literal(product_data.get("weight", None)),
             sql.Literal(product_data.get("weight_grams", None)),
             sql.Literal(product_data.get("published", None)),
@@ -252,6 +256,8 @@ def upsert_single_variant(
             sql.Literal(product_data.get("debug_3", None))
         )
         cursor.execute(insert_variant_query)
+
+        
 
     return db_status, product_id
 
@@ -307,17 +313,17 @@ def upsert_multi_variant(
             sql.Literal(product_data.get("cat", None)),
             sql.Literal(product_data.get("url", None)), 
             sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("name", None)),
-            sql.Literal(product_data.get("image_url", None)),
-            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("Title", None)),
+            sql.Literal(product_data.get("Image Src", None)),
+            sql.Literal(product_data.get("Body (HTML)", None)),
             sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("opt_1", None)),
-            sql.Literal(product_data.get("opt_2", None)),
-            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("Option1 name", None)),
+            sql.Literal(product_data.get("Option2 name", None)),
+            sql.Literal(product_data.get("Option3 name", None)),
             sql.Literal(product_data.get("tags", None)),
             sql.Literal(product_data.get("product_category", None)),
             sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("Vendor", None)),
             sql.Literal(product_data.get("inventory_tracker", None)),
             sql.Literal(product_data.get("inventory_quantity", None)),
             sql.Literal(product_data.get("debug_1", None)),
@@ -355,15 +361,14 @@ def upsert_multi_variant(
                 sql.Literal(var_sku),
                 sql.Literal(product_id),
                 sql.Literal(variant.get("handle", None)),
-                sql.Literal(variant.get("image_url", None)),
+                sql.Literal(variant.get("Image Src", None)),
                 sql.Literal(var_sku),
-                sql.Literal(variant.get("opt_1_val", None)),
-                sql.Literal(variant.get("opt_2_val", None)),
-                sql.Literal(variant.get("opt_3_val", None)),
-                sql.Literal(variant.get("price", None)),
-                sql.Literal(variant.get("cost", None)),
-                sql.Literal(variant.get("compare", None)),
-                sql.Literal(variant.get("upc", None)),
+                sql.Literal(variant.get("Option1 value", None)),
+                sql.Literal(variant.get("Option2 value", None)),
+                sql.Literal(variant.get("Option3 value", None)),
+                sql.Literal(variant.get("Variant Price", None)),
+                sql.Literal(variant.get("Variant Compare At Price", None)),
+                sql.Literal(variant.get("Variant Barcode", None)),
                 sql.Literal(variant.get("weight", None)),
                 sql.Literal(variant.get("weight_grams", None)),
                 sql.Literal(variant.get("published", None)),
@@ -373,6 +378,8 @@ def upsert_multi_variant(
                 sql.Literal(variant.get("debug_3", None))
             )
             cursor.execute(upsert_variant_query)
+
+            
 
     # --- NEW PATH (Rule 4: Product does NOT exist, Insert everything) ---
     else:
@@ -397,17 +404,17 @@ def upsert_multi_variant(
             sql.Literal(product_data.get("cat", None)),
             sql.Literal(product_data.get("url", None)),
             sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("name", None)),
-            sql.Literal(product_data.get("image_url", None)),
-            sql.Literal(product_data.get("desc", None)),
+            sql.Literal(product_data.get("Title", None)),
+            sql.Literal(product_data.get("Image Src", None)),
+            sql.Literal(product_data.get("Body (HTML)", None)),
             sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("opt_1", None)),
-            sql.Literal(product_data.get("opt_2", None)),
-            sql.Literal(product_data.get("opt_3", None)),
+            sql.Literal(product_data.get("Option1 name", None)),
+            sql.Literal(product_data.get("Option2 name", None)),
+            sql.Literal(product_data.get("Option3 name", None)),
             sql.Literal(product_data.get("tags", None)),
             sql.Literal(product_data.get("product_category", None)),
             sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("vendor", None)),
+            sql.Literal(product_data.get("Vendor", None)),
             sql.Literal(product_data.get("inventory_tracker", None)),
             sql.Literal(product_data.get("inventory_quantity", None)),
             sql.Literal(product_data.get("debug_1", None)),
@@ -416,6 +423,8 @@ def upsert_multi_variant(
             sql.Literal(product_data.get("handle", None)),
             sql.Literal(status_to_set)
         )
+
+
         cursor.execute(insert_product_query)
         product_id = cursor.fetchone()[0] 
         
@@ -440,15 +449,14 @@ def upsert_multi_variant(
                 sql.Literal(var_sku),
                 sql.Literal(product_id),
                 sql.Literal(variant.get("handle", None)),
-                sql.Literal(variant.get("image_url", None)),
+                sql.Literal(variant.get("Image Src", None)),
                 sql.Literal(var_sku),
-                sql.Literal(variant.get("opt_1_val", None)),
-                sql.Literal(variant.get("opt_2_val", None)),
-                sql.Literal(variant.get("opt_3_val", None)),
-                sql.Literal(variant.get("price", None)),
-                sql.Literal(variant.get("cost", None)),
-                sql.Literal(variant.get("compare", None)),
-                sql.Literal(variant.get("upc", None)),
+                sql.Literal(variant.get("Option1 value", None)),
+                sql.Literal(variant.get("Option2 value", None)),
+                sql.Literal(variant.get("Option3 value", None)),
+                sql.Literal(variant.get("Variant Price", None)),
+                sql.Literal(variant.get("Variant Compare At Price", None)),
+                sql.Literal(variant.get("Variant Barcode", None)),
                 sql.Literal(variant.get("weight", None)),
                 sql.Literal(variant.get("weight_grams", None)),
                 sql.Literal(variant.get("published", None)),
@@ -458,6 +466,8 @@ def upsert_multi_variant(
                 sql.Literal(variant.get("debug_3", None))
             )
             cursor.execute(insert_variant_query)
+
+            
             
     return db_status, product_id
 
