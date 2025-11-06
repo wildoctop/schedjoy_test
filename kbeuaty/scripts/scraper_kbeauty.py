@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import sql, extras
 import sys
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple, Optional, List, Union, Set, Any
 
 load_dotenv()
 
@@ -73,6 +73,34 @@ VARIANT_LOOKUP_TABLE = 'variant_db'
 # Note: I am assuming the connection and transaction (conn) is managed by the caller,
 # and this function only executes queries and does NOT manage the connection itself.
 
+def prepare_data_for_sql(value: Any) -> Optional[Union[str, int, float, bool]]:
+    """
+    Standardizes Python values for safe insertion into PostgreSQL via psycopg2.
+    1. Converts sets and lists (of primitives) to comma-separated strings.
+    2. Converts empty strings ("") to None (SQL NULL).
+    3. Returns None for None.
+    """
+    if value is None:
+        return None
+    
+    # 1. Handle collections (sets and lists) by converting them to strings
+    if isinstance(value, (set, list)):
+        # Join list/set items into a comma-separated string
+        try:
+            # Use map(str, value) to ensure all items are strings before joining
+            return ", ".join(map(str, value))
+        except Exception as e:
+            # Fallback if the collection contains complex, unjoinable objects
+            print(f"Warning: Could not stringify collection {value}. Error: {e}. Sending NULL.")
+            return None
+
+    # 2. Handle empty strings (crucial for numeric fields like price)
+    if isinstance(value, str) and value.strip() == "":
+        return None # Translates to SQL NULL
+    
+    # 3. Handle other types (int, float, bool, non-empty str, etc.)
+    return value
+
 def upsert_single_variant(
     product_data: Dict[str, Any], 
     target_sku: str, 
@@ -107,27 +135,27 @@ def upsert_single_variant(
             WHERE product_id = {}
         """).format(
             sql.Identifier(PRODUCT_TABLE),
-            sql.Literal(product_data.get("cat", None)),
-            sql.Literal(product_data.get("url", None)), 
-            sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("Title", None)),
-            sql.Literal(product_data.get("Variant SKU", None)), # Use Variant SKU for product.sku
-            sql.Literal(product_data.get("Image Src", None)),
-            sql.Literal(product_data.get("Body (HTML)", None)),
-            sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("Option1 name", None)),
-            sql.Literal(product_data.get("Option2 name", None)),
-            sql.Literal(product_data.get("Option3 name", None)),
-            sql.Literal(product_data.get("tags", None)),
-            sql.Literal(product_data.get("product_category", None)),
-            sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("Vendor", None)),
-            sql.Literal(product_data.get("inventory_tracker", None)),
-            sql.Literal(product_data.get("inventory_quantity", None)), # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("debug_1", None)),
-            sql.Literal(product_data.get("debug_2", None)),
-            sql.Literal(product_data.get("debug_3", None)),
-            sql.Literal(product_data.get("handle", None)), 
+            sql.Literal(prepare_data_for_sql(product_data.get("cat", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("url", None))), 
+            sql.Literal(prepare_data_for_sql(product_data.get("cat_name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Title", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant SKU", None))), # Use Variant SKU for product.sku
+            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Body (HTML)", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cert", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option1 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option2 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option3 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("tags", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("product_category", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("type", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Vendor", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_tracker", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_quantity", None))), # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))), 
             sql.Literal(status_to_set),
             sql.Literal(product_id)
         )
@@ -155,23 +183,23 @@ def upsert_single_variant(
             # Variant VALUES (using single product_data dict)
             sql.Literal(target_sku), 
             sql.Literal(product_id),
-            sql.Literal(product_data.get("handle", None)),
-            sql.Literal(product_data.get("Image Src", None)),
-            sql.Literal(target_sku),
-            sql.Literal(product_data.get("Option1 value", None)),
-            sql.Literal(product_data.get("Option2 value", None)),
-            sql.Literal(product_data.get("Option3 value", None)),
-            sql.Literal(product_data.get("Variant Price", None)),        # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("cost", None)),         # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("Variant Compare At Price", None)),      # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("Variant Barcode", None)),
-            sql.Literal(product_data.get("weight", None)),       # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("weight_grams", None)), # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("published", None)),
+            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(target_sku)),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option1 value", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option2 value", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option3 value", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant Price", None))),        # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("cost", None))),         # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant Compare At Price", None))),      # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant Barcode", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("weight", None))),       # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("weight_grams", None))), # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("published", None))),
             sql.Literal(status_to_set),
-            sql.Literal(product_data.get("debug_1", None)),
-            sql.Literal(product_data.get("debug_2", None)),
-            sql.Literal(product_data.get("debug_3", None))
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None)))
         )
         cursor.execute(upsert_variant_query)
 
@@ -197,27 +225,27 @@ def upsert_single_variant(
             RETURNING product_id;
         """).format(
             sql.Identifier(PRODUCT_TABLE),
-            sql.Literal(product_data.get("cat", None)),
-            sql.Literal(product_data.get("url", None)),
-            sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("Title", None)),
-            sql.Literal(product_data.get("Variant SKU", None)), # Use Variant SKU for product.sku
-            sql.Literal(product_data.get("Image Src", None)),
-            sql.Literal(product_data.get("Body (HTML)", None)),
-            sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("Option1 name", None)),
-            sql.Literal(product_data.get("Option2 name", None)),
-            sql.Literal(product_data.get("Option3 name", None)),
-            sql.Literal(product_data.get("tags", None)),
-            sql.Literal(product_data.get("product_category", None)),
-            sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("Vendor", None)),
-            sql.Literal(product_data.get("inventory_tracker", None)),
-            sql.Literal(product_data.get("inventory_quantity", None)), # IMPORTANT: Use None for numeric
-            sql.Literal(product_data.get("debug_1", None)),
-            sql.Literal(product_data.get("debug_2", None)),
-            sql.Literal(product_data.get("debug_3", None)),
-            sql.Literal(product_data.get("handle", None)),
+            sql.Literal(prepare_data_for_sql(product_data.get("cat", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("url", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cat_name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Title", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant SKU", None))), # Use Variant SKU for product.sku
+            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Body (HTML)", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cert", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option1 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option2 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option3 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("tags", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("product_category", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("type", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Vendor", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_tracker", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_quantity", None))), # IMPORTANT: Use None for numeric
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
             sql.Literal(status_to_set)
         )
         cursor.execute(insert_product_query)
@@ -237,23 +265,23 @@ def upsert_single_variant(
             sql.Identifier(VARIANT_LOOKUP_TABLE),
             sql.Literal(target_sku),
             sql.Literal(product_id),
-            sql.Literal(product_data.get("handle", None)),
-            sql.Literal(product_data.get("Image Src", None)),
-            sql.Literal(target_sku),
-            sql.Literal(product_data.get("Option1 value", None)),
-            sql.Literal(product_data.get("Option2 value", None)),
-            sql.Literal(product_data.get("Option3 value", None)),
-            sql.Literal(product_data.get("Variant Price", None)),
-            sql.Literal(product_data.get("cost", None)),
-            sql.Literal(product_data.get("Variant Compare At Price", None)),
-            sql.Literal(product_data.get("Variant Barcode", None)),
-            sql.Literal(product_data.get("weight", None)),
-            sql.Literal(product_data.get("weight_grams", None)),
-            sql.Literal(product_data.get("published", None)),
+            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(target_sku)),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option1 value", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option2 value", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option3 value", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant Price", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cost", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant Compare At Price", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Variant Barcode", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("weight", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("weight_grams", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("published", None))),
             sql.Literal(status_to_set),
-            sql.Literal(product_data.get("debug_1", None)),
-            sql.Literal(product_data.get("debug_2", None)),
-            sql.Literal(product_data.get("debug_3", None))
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None)))
         )
         cursor.execute(insert_variant_query)
 
@@ -310,25 +338,25 @@ def upsert_multi_variant(
             WHERE product_id = {}
         """).format(
             sql.Identifier(PRODUCT_TABLE),
-            sql.Literal(product_data.get("cat", None)),
-            sql.Literal(product_data.get("url", None)), 
-            sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("Title", None)),
-            sql.Literal(product_data.get("Image Src", None)),
-            sql.Literal(product_data.get("Body (HTML)", None)),
-            sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("Option1 name", None)),
-            sql.Literal(product_data.get("Option2 name", None)),
-            sql.Literal(product_data.get("Option3 name", None)),
-            sql.Literal(product_data.get("tags", None)),
-            sql.Literal(product_data.get("product_category", None)),
-            sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("Vendor", None)),
-            sql.Literal(product_data.get("inventory_tracker", None)),
-            sql.Literal(product_data.get("inventory_quantity", None)),
-            sql.Literal(product_data.get("debug_1", None)),
-            sql.Literal(product_data.get("debug_2", None)),
-            sql.Literal(product_data.get("debug_3", None)),
+            sql.Literal(prepare_data_for_sql(product_data.get("cat", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("url", None))), 
+            sql.Literal(prepare_data_for_sql(product_data.get("cat_name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Title", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Body (HTML)", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cert", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option1 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option2 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option3 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("tags", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("product_category", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("type", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Vendor", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_tracker", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_quantity", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
             sql.Literal(status_to_set),
             sql.Literal(product_id)
         )
@@ -360,22 +388,22 @@ def upsert_multi_variant(
                 sql.Identifier(VARIANT_LOOKUP_TABLE),
                 sql.Literal(var_sku),
                 sql.Literal(product_id),
-                sql.Literal(variant.get("handle", None)),
-                sql.Literal(variant.get("Image Src", None)),
+                sql.Literal(prepare_data_for_sql(variant.get("handle", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Image Src", None))),
                 sql.Literal(var_sku),
-                sql.Literal(variant.get("Option1 value", None)),
-                sql.Literal(variant.get("Option2 value", None)),
-                sql.Literal(variant.get("Option3 value", None)),
-                sql.Literal(variant.get("Variant Price", None)),
-                sql.Literal(variant.get("Variant Compare At Price", None)),
-                sql.Literal(variant.get("Variant Barcode", None)),
-                sql.Literal(variant.get("weight", None)),
-                sql.Literal(variant.get("weight_grams", None)),
-                sql.Literal(variant.get("published", None)),
+                sql.Literal(prepare_data_for_sql(variant.get("Option1 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Option2 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Option3 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Variant Price", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Variant Compare At Price", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Variant Barcode", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("weight", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("weight_grams", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("published", None))),
                 sql.Literal(status_to_set),
-                sql.Literal(variant.get("debug_1", None)),
-                sql.Literal(variant.get("debug_2", None)),
-                sql.Literal(variant.get("debug_3", None))
+                sql.Literal(prepare_data_for_sql(variant.get("debug_1", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("debug_2", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("debug_3", None)))
             )
             cursor.execute(upsert_variant_query)
 
@@ -401,26 +429,26 @@ def upsert_multi_variant(
             RETURNING product_id;
         """).format(
             sql.Identifier(PRODUCT_TABLE),
-            sql.Literal(product_data.get("cat", None)),
-            sql.Literal(product_data.get("url", None)),
-            sql.Literal(product_data.get("cat_name", None)),
-            sql.Literal(product_data.get("Title", None)),
-            sql.Literal(product_data.get("Image Src", None)),
-            sql.Literal(product_data.get("Body (HTML)", None)),
-            sql.Literal(product_data.get("cert", None)),
-            sql.Literal(product_data.get("Option1 name", None)),
-            sql.Literal(product_data.get("Option2 name", None)),
-            sql.Literal(product_data.get("Option3 name", None)),
-            sql.Literal(product_data.get("tags", None)),
-            sql.Literal(product_data.get("product_category", None)),
-            sql.Literal(product_data.get("type", None)),
-            sql.Literal(product_data.get("Vendor", None)),
-            sql.Literal(product_data.get("inventory_tracker", None)),
-            sql.Literal(product_data.get("inventory_quantity", None)),
-            sql.Literal(product_data.get("debug_1", None)),
-            sql.Literal(product_data.get("debug_2", None)),
-            sql.Literal(product_data.get("debug_3", None)),
-            sql.Literal(product_data.get("handle", None)),
+            sql.Literal(prepare_data_for_sql(product_data.get("cat", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("url", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cat_name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Title", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Body (HTML)", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("cert", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option1 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option2 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Option3 name", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("tags", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("product_category", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("type", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Vendor", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_tracker", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("inventory_quantity", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
             sql.Literal(status_to_set)
         )
 
@@ -448,22 +476,22 @@ def upsert_multi_variant(
                 sql.Identifier(VARIANT_LOOKUP_TABLE),
                 sql.Literal(var_sku),
                 sql.Literal(product_id),
-                sql.Literal(variant.get("handle", None)),
-                sql.Literal(variant.get("Image Src", None)),
+                sql.Literal(prepare_data_for_sql(variant.get("handle", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Image Src", None))),
                 sql.Literal(var_sku),
-                sql.Literal(variant.get("Option1 value", None)),
-                sql.Literal(variant.get("Option2 value", None)),
-                sql.Literal(variant.get("Option3 value", None)),
-                sql.Literal(variant.get("Variant Price", None)),
-                sql.Literal(variant.get("Variant Compare At Price", None)),
-                sql.Literal(variant.get("Variant Barcode", None)),
-                sql.Literal(variant.get("weight", None)),
-                sql.Literal(variant.get("weight_grams", None)),
-                sql.Literal(variant.get("published", None)),
+                sql.Literal(prepare_data_for_sql(variant.get("Option1 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Option2 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Option3 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Variant Price", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Variant Compare At Price", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Variant Barcode", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("weight", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("weight_grams", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("published", None))),
                 sql.Literal(status_to_set),
-                sql.Literal(variant.get("debug_1", None)),
-                sql.Literal(variant.get("debug_2", None)),
-                sql.Literal(variant.get("debug_3", None))
+                sql.Literal(prepare_data_for_sql(variant.get("debug_1", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("debug_2", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("debug_3", None)))
             )
             cursor.execute(insert_variant_query)
 
