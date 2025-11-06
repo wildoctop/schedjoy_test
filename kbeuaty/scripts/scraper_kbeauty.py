@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import sql, extras
 import sys
+from typing import Dict, Any, Tuple, Optional
 
 load_dotenv()
 
@@ -532,6 +533,7 @@ def scrape_products_all():
     def get_product_urls(driver, url_count):
         csv_file = CSV
         cat_urls = []
+        urls_stats = []
         urls_to_save = []
         product_urls = []
         if CSV_READY:
@@ -550,7 +552,7 @@ def scrape_products_all():
                     product_count_span = cat.select_one('span.collection-item__product-count')
                     if product_count_span:
                         product_count_span.decompose()
-                    cat_name = cat_name_el.text.strip()                                     
+                    cat_name = cat_name_el.text.strip() 
                 cat_urls.append({'type': 'https://kbeauty.ca/collections', 'url': f"https://kbeauty.ca{cat_url}", 'name': cat_name})
                 page += 1
             for cat in cat_urls:
@@ -573,6 +575,7 @@ def scrape_products_all():
             for el in prod_el:
                 product_urls.append({'cat': url, 'url': f"https://kbeauty.ca{el.select_one('a').get('href')}", 'name': 'MakeUp'})
                 urls_to_save.append({'cat': url, 'url': f"https://kbeauty.ca{el.select_one('a').get('href')}", 'name': 'MakeUp'})
+                urls_stats.append({'cat': url, 'url': f"https://kbeauty.ca{el.select_one('a').get('href')}", 'name': cat['name']})
             print(f'Found {len(product_urls)} products')
             url_to_csv(urls_to_save)
             urls_to_save = []

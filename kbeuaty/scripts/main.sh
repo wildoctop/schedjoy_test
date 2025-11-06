@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -o pipefail
 # --- 1. CONFIGURATION ---
 
 # 1.1 Python Environment
@@ -20,8 +20,8 @@ export DB_PASS="parSer2025!*" # !! CRITICAL: Change this! !!
 export DB_HOST="localhost"
 
 # 1.4 Logging and Error Handling
-LOG_FILE="./script_log_$(date +%Y%m%d_%H%M%S).log"
-"
+LOG_FILE="../logs/kbeauty_log_$(date +%Y%m%d_%H%M%S).log"
+ALERT_EMAIL="your_alert_email@example.com"
 
 
 # --- 2. FUNCTIONS ---
@@ -32,11 +32,11 @@ check_exit_code() {
     STEP_NAME="$1"
 
     if [ $EXIT_CODE -eq 0 ]; then
-        echo "SUCCESS: $STEP_NAME completed successfully." | tee -a "$LOG_FILE" 
+        echo "SUCCESS: $STEP_NAME completed successfully." | tee -a "$LOG_FILE"
     elif [ $EXIT_CODE -eq 2 ]; then
         echo "ERROR ($EXIT_CODE): $STEP_NAME failed due to a Database Error." | tee -a "$LOG_FILE"
         # Send specialized alert
-        echo "DB Error in $STEP_NAME. Check log file $LOG_FILE" 
+        echo "DB Error in $STEP_NAME. Check log file $LOG_FILE"
         exit 1 
     else
         echo "FATAL ERROR ($EXIT_CODE): $STEP_NAME failed." | tee -a "$LOG_FILE"
