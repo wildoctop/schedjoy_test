@@ -1,0 +1,4 @@
+--- Pipeline Start (using Poetry): Thu Nov  6 11:54:06 AM UTC 2025 ---
+Log file: ../logs/kbeauty_log_20251106_115406.log
+---------------------------------
+Starting Step 1: Running scraper_kbeauty.py

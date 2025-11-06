@@ -483,6 +483,7 @@ def upsert_multi_variant(
                 sql.Literal(prepare_data_for_sql(variant.get("Option1 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Option2 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Option3 value", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("cost", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Price", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Compare At Price", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Barcode", None))),
@@ -510,8 +511,6 @@ def upsert_product_data(
     """
     DISPATCHER: Routes data to the single-variant or multi-variant handler.
     """
-    print(product_data)
-    print(variants)
     # --- Multi-Variant Product ---
     if variants:
         target_sku = variants[0].get("Variant SKU")
