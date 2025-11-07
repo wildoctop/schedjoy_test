@@ -168,7 +168,7 @@ def upsert_single_variant(
             INSERT INTO {} (
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
                 price, cost, compare, upc, weight, weight_grams, published, status, 
-                debug_1, debug_2, debug_3
+                debug_1, debug_2, debug_3, vendor
             )
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -257,7 +257,7 @@ def upsert_single_variant(
             INSERT INTO {} (
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
                 price, cost, compare, upc, weight, weight_grams, published, status, 
-                debug_1, debug_2, debug_3
+                debug_1, debug_2, debug_3, vendor
             )
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -376,7 +376,7 @@ def upsert_multi_variant(
                 INSERT INTO {} (
                     var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
                     price, cost, compare, upc, weight, weight_grams, published, status, 
-                    debug_1, debug_2, debug_3
+                    debug_1, debug_2, debug_3, vendor
                 )
                 VALUES (
                     {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -472,7 +472,7 @@ def upsert_multi_variant(
                 INSERT INTO {} (
                     var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
                     price, cost, compare, upc, weight, weight_grams, published, status, 
-                    debug_1, debug_2, debug_3
+                    debug_1, debug_2, debug_3, vendor
                 )
                 VALUES (
                     {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -487,7 +487,6 @@ def upsert_multi_variant(
                 sql.Literal(prepare_data_for_sql(variant.get("Option1 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Option2 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Option3 value", None))),
-                sql.Literal(prepare_data_for_sql(variant.get("cost", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Price", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Compare At Price", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Barcode", None))),
@@ -516,6 +515,8 @@ def upsert_product_data(
     """
     DISPATCHER: Routes data to the single-variant or multi-variant handler.
     """
+    print(product_data)
+    print(variants)
     # --- Multi-Variant Product ---
     if variants:
         target_sku = variants[0].get("Variant SKU")
