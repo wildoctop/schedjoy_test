@@ -1,5 +1,4 @@
-
-
+import pandas as pd
 import psycopg2
 import csv
 import sys
@@ -7,6 +6,7 @@ import os
 from datetime import datetime
 from psycopg2 import sql
 from dotenv import load_dotenv
+from typing import List, Dict, Any
 
 load_dotenv()
 
@@ -38,6 +38,101 @@ if not os.path.exists(ARCHIVE_DIR):
     os.makedirs(ARCHIVE_DIR)
 
 # --- 1. Main Export and Transformation Function ---
+
+
+COLUMN_RENAMES = {
+    'title': 'Title',
+    'image_url': 'Image Src',
+    'descr': 'Body (HTML)',
+    'cert': 'Useful links (product.metafields.custom.useful_links)',
+    'opt_1': 'Option1 name',
+    'opt_2': 'Option2 name',
+    'opt_3': 'Option3 name',
+    'tags': 'Tags',
+    'product_category': 'Product Category',
+    'type': 'Type',
+    'vendor': 'Vendor',
+    'inventory_tracker': 'Inventory tracker',
+    'inventory_quantity': 'Inventory quantity',
+    'handle': 'Handle',
+    'var_image_url': 'Variant Image',
+    'sku': 'Variant SKU',
+    'opt_1_val': 'Option1 value',
+    'opt_2_val': 'Option2 value',
+    'opt_3_val': 'Option3 value',
+    'price': 'Variant Price',
+    'cost': 'Cost per item',
+    'compare': 'Variant Compare At Price',
+    'upc': 'Variant Barcode',
+    'weight': 'Variant Grams',
+    'weight_grams': 'Variant Weight Unit',
+    'published': 'Published',
+    'status': 'Status'
+}
+
+
+# 2. Define the FINAL Column Order (Crucial for CSV structure)
+# List the renamed keys in the exact order you want them in the final file.
+FINAL_COLUMNS = [
+    'Handle',
+    'Title',
+    'Variant SKU',
+    'Body (HTML)',
+    'Useful links (product.metafields.custom.useful_links)',
+    'Option1 name',
+    'Option2 name',
+    'Option3 name',
+    'Option1 value',
+    'Option2 value',
+    'Option3 value',
+    'Variant Compare At Price',
+    'Variant Price',
+    'Cost per item',
+    'Tags',
+    'Product Category',
+    'Type',
+    'Vendor',
+    'Image Src',
+    'Variant Image',
+    'Inventory tracker',
+    'Inventory quantity',
+    'Variant Barcode',
+    'is_variant_parent',
+    'is_single_variant',
+    'Status',
+    'Variant Grams',
+    'Variant Weight Unit',
+    'product_group_id',
+    'debug_1',
+    'debug_2',
+    'debug_3',
+    'cat_name'
+]
+
+def process_and_save_data(data_list: List[Dict[str, Any]], filename: str):
+    """
+    Converts a list of dictionaries into a DataFrame, renames and 
+    reorders columns, and saves it to a CSV file.
+    """
+    if not data_list:
+        print(f"No data to save for {filename}")
+        return
+
+    # 1. Convert list of dictionaries to a DataFrame
+    df = pd.DataFrame(data_list)
+    
+    # 2. Rename the columns
+    df = df.rename(columns=COLUMN_RENAMES)
+    
+    # 3. Reorder the columns using reindex (This is the most important step for order)
+    # This also discards any columns not listed in FINAL_COLUMNS
+    df = df.reindex(columns=FINAL_COLUMNS)
+    
+    # 4. Save to CSV
+    df.to_csv(filename, index=False, header=True)
+    print(f"Successfully saved {len(data_list)} rows to {filename}")
+
+
 
 def export_and_manage_data():
     """Connects to DB, exports data to CSVs, archives, and updates statuses."""
@@ -88,9 +183,7 @@ def export_and_manage_data():
             row_dict = dict(zip(variant_cols, row_tuple))
             pid = row_dict['product_id']
             product_ids_to_fetch.add(pid)
-            
-            if pid not in variants_by_product:
-                variants_by_product[pid] = []
+
             variants_by_product[pid].append(row_dict)
 
 
@@ -133,28 +226,47 @@ def export_and_manage_data():
         for pid in product_ids_to_fetch:
             if pid not in product_data_map:
                 continue # Skip if product data wasn't fetched (shouldn't happen)
-            
+                
             # --- Get Parent Data ---
             parent_row = product_data_map[pid]
+            parent_written = False # Initialize flag for each new product ID
             
             if pid in variants_by_product:
                 for variant_row in variants_by_product[pid]:
                     
-                    # Merge product and variant data for the flat CSV row
-                    # Variant data (especially SKU, price, image) overwrites product data where keys conflict
-                    merged_row = {**parent_row, **variant_row}
-                    status = merged_row['status']
-                    
-                    # 1. Separate for Output Files
-                    if status in STATUS_MAP:
-                        separated_data[status].append(merged_row)
-                    else:
-                        draft_data.append(merged_row)
+                    # --- 1. PROCESS AND SAVE PARENT ROW (Executed only once per PID) ---
+                    if not parent_written:
+                        parent_status = parent_row['status']
                         
-                    # 2. Prepare Archive Copy (using the raw tuple with column order preserved)
-                    if status in ['UPD', 'NEW', 'EXIST']:
-                         # Create a tuple from the merged_row based on ALL_COLUMNS order
-                         archive_rows.append(tuple(merged_row.get(col, None) for col in ALL_COLUMNS))
+                        # A. Separate for Output Files
+                        if parent_status in STATUS_MAP:
+                            # Save the raw product data
+                            separated_data[parent_status].append(parent_row)
+                        else:
+                            draft_data.append(parent_row)
+                            
+                        # B. Prepare Archive Copy 
+                        if parent_status in ['UPD', 'NEW', 'EXIST']:
+                            # Use the parent_row directly. Variant fields will be None.
+                            archive_rows.append(tuple(parent_row.get(col, None) for col in ALL_COLUMNS))
+                        
+                        parent_written = True # Mark parent as saved
+
+                    # --- 2. PROCESS AND SAVE VARIANT ROW (Executed for every variant) ---
+                    variant_status = variant_row['status']
+                    
+                    # A. Separate for Output Files
+                    if variant_status in STATUS_MAP:
+                        # Save the raw variant data
+                        separated_data[variant_status].append(variant_row)
+                    else:
+                        draft_data.append(variant_row)
+                        
+                    # B. Prepare Archive Copy (using the raw tuple with column order preserved)
+                    if variant_status in ['UPD', 'NEW', 'EXIST']:
+                        # Use the variant_row directly. Product fields will be None.
+                        archive_rows.append(tuple(variant_row.get(col, None) for col in ALL_COLUMNS))
+
         
         
         # --- STEP 4: Write Output CSVs and Archive ---

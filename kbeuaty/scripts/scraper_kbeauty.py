@@ -171,7 +171,7 @@ def upsert_single_variant(
                 debug_1, debug_2, debug_3
             )
             VALUES (
-                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
             )
             ON CONFLICT (var_id) DO UPDATE SET 
                 var_image_url = EXCLUDED.var_image_url,
@@ -199,7 +199,8 @@ def upsert_single_variant(
             sql.Literal(status_to_set),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None)))
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Vendor", None)))
         )
         cursor.execute(upsert_variant_query)
 
@@ -259,7 +260,7 @@ def upsert_single_variant(
                 debug_1, debug_2, debug_3
             )
             VALUES (
-                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
             );
         """).format(
             sql.Identifier(VARIANT_LOOKUP_TABLE),
@@ -281,7 +282,8 @@ def upsert_single_variant(
             sql.Literal(status_to_set),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None)))
+            sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Vendor", None)))
         )
         cursor.execute(insert_variant_query)
 
@@ -304,6 +306,7 @@ def upsert_multi_variant(
     
     if variant_skus:
         # 2. Build the WHERE var_id IN (...) clause from the list of SKUs
+        print(len(variant_skus))
         sku_literals = sql.SQL(', ').join(sql.Literal(sku) for sku in variant_skus)
         
         select_query = sql.SQL("""
@@ -376,7 +379,7 @@ def upsert_multi_variant(
                     debug_1, debug_2, debug_3
                 )
                 VALUES (
-                    {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+                    {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
                 )
                 ON CONFLICT (var_id) DO UPDATE SET 
                     var_image_url = EXCLUDED.var_image_url,
@@ -404,7 +407,8 @@ def upsert_multi_variant(
                 sql.Literal(status_to_set),
                 sql.Literal(prepare_data_for_sql(variant.get("debug_1", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("debug_2", None))),
-                sql.Literal(prepare_data_for_sql(variant.get("debug_3", None)))
+                sql.Literal(prepare_data_for_sql(variant.get("debug_3", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Vendor", None)))
             )
             cursor.execute(upsert_variant_query)
 
@@ -471,7 +475,7 @@ def upsert_multi_variant(
                     debug_1, debug_2, debug_3
                 )
                 VALUES (
-                    {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+                    {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
                 );
             """).format(
                 sql.Identifier(VARIANT_LOOKUP_TABLE),
@@ -492,7 +496,8 @@ def upsert_multi_variant(
                 sql.Literal(status_to_set),
                 sql.Literal(prepare_data_for_sql(variant.get("debug_1", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("debug_2", None))),
-                sql.Literal(prepare_data_for_sql(variant.get("debug_3", None)))
+                sql.Literal(prepare_data_for_sql(variant.get("debug_3", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Vendor", None)))
             )
             cursor.execute(insert_variant_query)
 
@@ -945,7 +950,7 @@ def scrape_products_all():
             var_to_add['Variant Image'] = ''
             var_to_add['Variant Price'] = var_price
             var_to_add['Variant Compare At Price'] = var_compare_price
-            var_to_add['Vendor'] = ""
+            var_to_add['Vendor'] = "KBeauty"
             var_to_add['Option1 name'] = button_name
             var_to_add['Option1 value'] = button_value
             variants_data.append(var_to_add)
@@ -1019,7 +1024,7 @@ def scrape_products_all():
                     var_to_add['Variant Image'] = ''
                     var_to_add['Variant Price'] = var_price
                     var_to_add['Variant Compare At Price'] = var_compare_price
-                    var_to_add['Vendor'] = ""
+                    var_to_add['Vendor'] = "KBeauty"
                     var_to_add['Option1 name'] = button_name
                     var_to_add['Option1 value'] = button_value
                     variants_data.append(var_to_add)
@@ -1106,7 +1111,7 @@ def scrape_products_all():
                             var_to_add['Variant Image'] = ''
                             var_to_add['Variant Price'] = var_price
                             var_to_add['Variant Compare At Price'] = var_compare_price
-                            var_to_add['Vendor'] = ""
+                            var_to_add['Vendor'] = "Vendor"
                             var_to_add['Option1 name'] = option_name
                             var_to_add['Option1 value'] = option_value
                             variants_data.append(var_to_add)
@@ -1179,7 +1184,6 @@ def scrape_products_all():
             product['Variant Price'] = ''
             product['Variant Compare At Price'] = ''
             product["Option1 name"] = variants[0]['Option1 name']
-            product['Vendor'] = ""
             for variant in variants:
                 variant['Option1 name'] = ""
         
