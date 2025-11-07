@@ -272,32 +272,18 @@ def export_and_manage_data():
         # --- STEP 4: Write Output CSVs and Archive ---
         
         # a. Write UPD and NEW files
+        print("\n--- Exporting CSV Files ---")
         for status, filename in STATUS_MAP.items():
-            if separated_data[status]:
-                output_path = os.path.join(OUTPUT_DIR, filename)
-                with open(output_path, 'w', newline='', encoding='utf-8') as f:
-                    # Use the combined header list
-                    writer = csv.DictWriter(f, fieldnames=ALL_COLUMNS, extrasaction='ignore')
-                    writer.writeheader()
-                    writer.writerows(separated_data[status])
-                print(f"Exported {len(separated_data[status])} records to {output_path}")
+            process_and_save_data(separated_data[status], filename, FINAL_COLUMNS)
 
         # b. Write TO_DRAFT file
-        if draft_data:
-            draft_path = os.path.join(OUTPUT_DIR, "to_draft.csv")
-            with open(draft_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=ALL_COLUMNS, extrasaction='ignore')
-                writer.writeheader()
-                writer.writerows(draft_data)
-            print(f"Exported {len(draft_data)} records to {draft_path} (Draft/Other status)")
+        process_and_save_data(draft_data, "to_draft.csv", FINAL_COLUMNS)
             
         # c. Write Archive Copy
-        if archive_rows:
-            with open(archive_filename, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow(ALL_COLUMNS) # Write the combined headers
-                writer.writerows(archive_rows)
-            print(f"Archived {len(archive_rows)} records to {archive_filename}")
+        # NOTE: Archive is saved using ALL_COLUMNS list and tuples, not dicts, so we use it raw.
+        # We pass ALL_COLUMNS as the final argument for the header/reindex in the helper.
+        process_and_save_data(archive_rows, os.path.basename(archive_filename), ALL_COLUMNS)
+
         
         
         # --- STEP 5: Update Statuses in Database (Using variant_rows_tuples for consistency) ---
