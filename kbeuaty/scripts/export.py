@@ -8,7 +8,10 @@ from psycopg2 import sql
 from dotenv import load_dotenv
 from typing import List, Dict, Any
 
-load_dotenv()
+script_dir = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(script_dir, '..', 'local.env') 
+
+load_dotenv(dotenv_path=dotenv_path)
 
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
@@ -16,6 +19,8 @@ DB_PASS = os.getenv("DB_PASS")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 WEBSITE = os.getenv("WEBSITE")
+
+
 
 DB_CONFIG = {
     "host": DB_HOST,
@@ -153,6 +158,7 @@ def export_and_manage_data():
         cursor = conn.cursor()
 
 
+
         variant_select_query = sql.SQL("""
             SELECT 
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
@@ -224,36 +230,54 @@ def export_and_manage_data():
         
         # Iterate over products (to ensure parent row comes first)
         for pid in product_ids_to_fetch:
+    
             if pid not in product_data_map:
                 continue # Skip if product data wasn't fetched (shouldn't happen)
                 
             # --- Get Parent Data ---
             parent_row = product_data_map[pid]
-            parent_written = False # Initialize flag for each new product ID
+            parent_written = False 
+            
+            # 1. NEW LOGIC: DETERMINE PARENT STATUS FROM VARIANTS
+            parent_status = 'EXIST' # Set a safe default status (e.g., 'EXIST' for products already known)
             
             if pid in variants_by_product:
-                for variant_row in variants_by_product[pid]:
+                variants = variants_by_product[pid]
+
+                # --- NEW RULE: ALL VARIANTS ARE NEW ---
+                # Check if the list of variants is non-empty AND 
+                # all variants have the status 'NEW'
+                if variants and all(v.get('status') == 'NEW' for v in variants):
+                    parent_status = 'NEW'
+                    
+                # --- PREVIOUS RULE: ANY VARIANT IS UPDATED ---
+                # Only check for UPD if the status wasn't already determined as NEW
+                elif any(v.get('status') == 'UPD' for v in variants):
+                    parent_status = 'UPD'
+                
+                # Now, proceed to iterate through the variants
+                for variant_row in variants:
                     
                     # --- 1. PROCESS AND SAVE PARENT ROW (Executed only once per PID) ---
                     if not parent_written:
-                        parent_status = parent_row['status']
                         
                         # A. Separate for Output Files
                         if parent_status in STATUS_MAP:
                             # Save the raw product data
+                            parent_row['status'] = parent_status 
                             separated_data[parent_status].append(parent_row)
                         else:
+                            parent_row['status'] = parent_status
                             draft_data.append(parent_row)
                             
                         # B. Prepare Archive Copy 
                         if parent_status in ['UPD', 'NEW', 'EXIST']:
-                            # Use the parent_row directly. Variant fields will be None.
                             archive_rows.append(tuple(parent_row.get(col, None) for col in ALL_COLUMNS))
                         
                         parent_written = True # Mark parent as saved
 
                     # --- 2. PROCESS AND SAVE VARIANT ROW (Executed for every variant) ---
-                    variant_status = variant_row['status']
+                    variant_status = variant_row['status'] # This is still correct for variants
                     
                     # A. Separate for Output Files
                     if variant_status in STATUS_MAP:
@@ -262,9 +286,8 @@ def export_and_manage_data():
                     else:
                         draft_data.append(variant_row)
                         
-                    # B. Prepare Archive Copy (using the raw tuple with column order preserved)
+                    # B. Prepare Archive Copy 
                     if variant_status in ['UPD', 'NEW', 'EXIST']:
-                        # Use the variant_row directly. Product fields will be None.
                         archive_rows.append(tuple(variant_row.get(col, None) for col in ALL_COLUMNS))
 
         
