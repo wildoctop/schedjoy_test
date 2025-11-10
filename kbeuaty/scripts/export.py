@@ -19,6 +19,7 @@ DB_PASS = os.getenv("DB_PASS")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 WEBSITE = os.getenv("WEBSITE")
+VENDOR = os.getenv("VENDOR")
 
 
 
@@ -59,7 +60,6 @@ COLUMN_RENAMES = {
     'vendor': 'Vendor',
     'inventory_tracker': 'Inventory tracker',
     'inventory_quantity': 'Inventory quantity',
-    'handle': 'Handle',
     'var_image_url': 'Variant Image',
     'sku': 'Variant SKU',
     'opt_1_val': 'Option1 value',
@@ -165,11 +165,12 @@ def export_and_manage_data():
                 price, cost, compare, upc, weight, weight_grams, published, status, 
                 debug_1, debug_2, debug_3
             FROM {} 
-            WHERE status IN {}
+            WHERE status IN {} AND vendor = {}
             ORDER BY product_id, sku;
         """).format(
             sql.Identifier(VARIANT_TABLE),
-            sql.Literal(TARGET_STATUSES) 
+            sql.Literal(TARGET_STATUSES),
+            sql.Literal(VENDOR) 
         )
 
         cursor.execute(variant_select_query)
