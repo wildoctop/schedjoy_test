@@ -111,7 +111,8 @@ FINAL_COLUMNS = [
     'debug_1',
     'debug_2',
     'debug_3',
-    'cat_name'
+    'cat_name',
+    'status_int'
 ]
 
 def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_columns: List[str]):
@@ -128,11 +129,18 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     #print(df)
     # 2. Rename the columns
     df = df.rename(columns=COLUMN_RENAMES)
+    
     #print(df)
     # 3. Reorder the columns using reindex (This is the most important step for order)
     # This also discards any columns not listed in FINAL_COLUMNS
     df = df.reindex(columns=FINAL_COLUMNS)
-    print(df)
+    
+    df['Variant Price'] = df['Variant Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
+    df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
+    df['Cost per item'] = df['Cost per item'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
+    columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item']
+        
+    df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "")
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
     print(f"Successfully saved {len(data_list)} rows to {filename}")
@@ -162,7 +170,7 @@ def export_and_manage_data():
         variant_select_query = sql.SQL("""
             SELECT 
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
-                price, cost, compare, upc, weight, weight_grams, published, status, 
+                price, cost, compare, upc, weight, weight_grams, published, status, status_int 
                 debug_1, debug_2, debug_3
             FROM {} 
             WHERE status IN {}
@@ -199,7 +207,7 @@ def export_and_manage_data():
             SELECT 
                 product_id, cat, url, cat_name, title, sku, image_url, descr, cert, opt_1, opt_2, 
                 opt_3, tags, product_category, type, vendor, inventory_tracker, 
-                inventory_quantity, debug_1, debug_2, debug_3, handle
+                inventory_quantity, debug_1, debug_2, debug_3, handle, status
             FROM {} 
             WHERE product_id IN ({})
         """).format(
@@ -248,12 +256,12 @@ def export_and_manage_data():
                 # --- NEW RULE: ALL VARIANTS ARE NEW ---
                 # Check if the list of variants is non-empty AND 
                 # all variants have the status 'NEW'
-                if variants and all(v.get('status') == 'NEW' for v in variants):
+                if variants and all(v.get('status_int') == 'NEW' for v in variants):
                     parent_status = 'NEW'
                     
                 # --- PREVIOUS RULE: ANY VARIANT IS UPDATED ---
                 # Only check for UPD if the status wasn't already determined as NEW
-                elif any(v.get('status') == 'UPD' for v in variants):
+                elif any(v.get('status_int') == 'UPD' for v in variants):
                     parent_status = 'UPD'
                 
                 # Now, proceed to iterate through the variants
@@ -265,10 +273,10 @@ def export_and_manage_data():
                         # A. Separate for Output Files
                         if parent_status in STATUS_MAP:
                             # Save the raw product data
-                            parent_row['status'] = parent_status 
+                            parent_row['status_int'] = parent_status 
                             separated_data[parent_status].append(parent_row)
                         else:
-                            parent_row['status'] = parent_status
+                            parent_row['status_int'] = parent_status
                             draft_data.append(parent_row)
                             
                         # B. Prepare Archive Copy 
@@ -278,7 +286,7 @@ def export_and_manage_data():
                         parent_written = True # Mark parent as saved
 
                     # --- 2. PROCESS AND SAVE VARIANT ROW (Executed for every variant) ---
-                    variant_status = variant_row['status'] # This is still correct for variants
+                    variant_status = variant_row['status_int'] # This is still correct for variants
                     
                     # A. Separate for Output Files
                     if variant_status in STATUS_MAP:
@@ -299,7 +307,7 @@ def export_and_manage_data():
         print("\n--- Exporting CSV Files ---")
         for status, filename in STATUS_MAP.items():
             filename = os.path.join(OUTPUT_DIR, filename)
-            process_and_save_data(separated_data[status], filename, FINAL_COLUMNS)
+            process_and_save_data(separated_data[status_int], filename, FINAL_COLUMNS)
 
         # b. Write TO_DRAFT file
         d_filename = os.path.join(OUTPUT_DIR, "to_draft.csv")
@@ -308,7 +316,7 @@ def export_and_manage_data():
         # c. Write Archive Copy
         # NOTE: Archive is saved using ALL_COLUMNS list and tuples, not dicts, so we use it raw.
         # We pass ALL_COLUMNS as the final argument for the header/reindex in the helper.
-        a_filename = os.path.basename(arhive_filename)
+        a_filename = os.path.basename(archive_filename)
         a_filename = os.path.join(ARCHIVE_DIR, a_filename) 
         process_and_save_data(archive_rows, a_filename, ALL_COLUMNS)
 
@@ -327,7 +335,7 @@ def export_and_manage_data():
         skus_by_status = {status: [] for status in TARGET_STATUSES}
         for row_tuple in variant_rows_tuples:
             row_dict = dict(zip(variant_cols, row_tuple))
-            status = row_dict['status']
+            status = row_dict['status_int']
             skus_by_status[status].append(row_dict['sku'])
 
         
@@ -338,9 +346,9 @@ def export_and_manage_data():
             if skus_to_update:
                 update_query = sql.SQL("""
                     UPDATE {}
-                    SET status = {}
+                    SET status_int = {}
                     WHERE sku IN ({})
-                    AND status = {}
+                    AND status_int  = {}
                 """).format(
                     sql.Identifier(VARIANT_TABLE),
                     sql.Literal(new_status),

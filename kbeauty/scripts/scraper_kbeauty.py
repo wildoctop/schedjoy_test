@@ -20,7 +20,10 @@ from psycopg2 import sql, extras
 import sys
 from typing import Dict, Any, Tuple, Optional, List, Union, Set, Any
 
-load_dotenv()
+script_dir = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(script_dir, '..', 'local.env') 
+
+load_dotenv(dotenv_path=dotenv_path)
 
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
@@ -38,7 +41,7 @@ DB_CONFIG = {
 
 
 # TRUE - IF URL LIST .CSV FILE IS READY
-CSV_READY = False
+CSV_READY = True
 CSV = '../data/kbeauty_url.csv'
 PROD_DEBUG_FILE = '../data/debug_kbeauty.log'
 URL_DEBUG_FILE = '../data/debug_kbeauty_url.log'
@@ -500,6 +503,7 @@ def upsert_multi_variant(
                 sql.Literal(prepare_data_for_sql(variant.get("Option2 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Option3 value", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Price", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("cost", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Compare At Price", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Variant Barcode", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("weight", None))),
@@ -780,15 +784,27 @@ def fetch_item_page(url, driver):
         return None
 
 def fetch_page(url, driver):
-    try:
-        driver.get(url)
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div.footer__inner"))
-        ) 
-        return driver.page_source
-    except Exception as e:
-        print(f"Error fetching URL")
-        return None
+    MAX_RETRIES = 3
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            driver.get(url)
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.footer__inner"))
+            )
+            return driver.page_source
+        except ReadTimeoutError as e:
+            print(f"ReadTimeoutError occurred: {e}")
+            if attempt < MAX_RETRIES - 1:
+                print(f"Retrying in {3} seconds...")
+                time.sleep(3)
+            else:
+                print("Max retries reached. Failing.")
+            # Re-raise the exception or handle the failure gracefully
+                raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
 
 # Main function that scrape all products
 def scrape_products_all():
@@ -864,6 +880,7 @@ def scrape_products_all():
                         if el.select_one('img'):
                             img = el.select_one('img')  
                             new_url = re.sub(r"&width=.*", "&width=1000", img.get('src'))
+                            new_url = f"https:{new_url}"
                             image_url.append(new_url)
                     image_url = set(image_url)
                 else:
@@ -889,7 +906,8 @@ def scrape_products_all():
                     compare_price = prod_soup.select_one('s[data-compare-price]').text.strip()
                 
 
-
+                vendor = "KBeauty"
+                name = vendor + ' ' + name 
 
                 return { # Add product data as a single row
 
@@ -902,7 +920,7 @@ def scrape_products_all():
                     "Variant Image": '',
                     "Variant Price": price,
                     "Variant Compare At Price": compare_price,
-                    "Vendor": "KBeauty",
+                    "Vendor": vendor,
                     "Option1 name": "",
                     "Option1 value": "",
                     "Handle": create_url_handle(name, sku),
@@ -935,7 +953,7 @@ def scrape_products_all():
                 image_url_el = var_soup.select('div[class="image aspect-ratio--square animation--image animation--lazy-load loaded"]')
                 img = image_url_el[0].select_one('img')
                 new_url = re.sub(r"&width=.*", "&width=1000", img.get('src'))
-                var_image_url = new_url
+                var_image_url = f"https:{new_url}"
             else:
                 var_image_url = ""
 
@@ -991,7 +1009,7 @@ def scrape_products_all():
                 buttons_list = var_block[0].find_elements(By.CSS_SELECTOR, "button[type='button']")
                 cross = buttons_list[i].find_elements(By.CSS_SELECTOR, "span[class='product__chip-crossed']")
                 
-                if i <= len(buttons_list) and cross:
+                if i <= len(buttons_list) and not cross:
                     try:
                         buttons_list[i].click()
                     except Exception as e:
@@ -1011,7 +1029,7 @@ def scrape_products_all():
                         image_url_el = var_soup.select('div[class="image aspect-ratio--square animation--image animation--lazy-load loaded"]')
                         img = image_url_el[0].select_one('img')
                         new_url = re.sub(r"&width=.*", "&width=1000", img.get('src'))
-                        var_image_url = new_url
+                        var_image_url = f"https:{new_url}"
                     else:
                         var_image_url = ""
 
@@ -1098,7 +1116,7 @@ def scrape_products_all():
                                 image_url_el = var_soup.select('div[class="image aspect-ratio--square animation--image animation--lazy-load loaded"]')
                                 img = image_url_el[0].select_one('img')
                                 new_url = re.sub(r"&width=.*", "&width=1000", img.get('src'))
-                                var_image_url = new_url
+                                var_image_url = f"https:{new_url}"
                             else:
                                 var_image_url = ""
 
