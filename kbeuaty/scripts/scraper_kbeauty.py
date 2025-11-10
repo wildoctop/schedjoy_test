@@ -109,7 +109,7 @@ def upsert_single_variant(
 
     # A. LOOKUP by SKU
     select_query = sql.SQL("SELECT product_id FROM {} WHERE sku = {}").format(
-        sql.Identifier(PRODUCT_TABLE),
+        sql.Identifier(VARIANT_LOOKUP_TABLE),
         sql.Literal(target_sku)
     )
     cursor.execute(select_query)
@@ -275,7 +275,7 @@ def upsert_single_variant(
             sql.Literal(target_sku),
             sql.Literal(product_id),
             sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("var_img", None))),
             sql.Literal(prepare_data_for_sql(target_sku)),
             sql.Literal(prepare_data_for_sql(product_data.get("Option1 value", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("Option2 value", None))),
@@ -524,11 +524,7 @@ def upsert_product_data(
     variants: List[Dict[str, Any]], 
     cursor
 ) -> Tuple[Optional[str], Optional[int]]:
-    """
-    DISPATCHER: Routes data to the single-variant or multi-variant handler.
-    """
-    print(product_data)
-    print(variants)
+  
     # --- Multi-Variant Product ---
     if variants:
         target_sku = variants[0].get("Variant SKU")

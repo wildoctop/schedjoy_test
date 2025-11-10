@@ -118,6 +118,12 @@ def upsert_single_variant(
     
     db_status = None
 
+    image_urls: List[str] = product_data.get('img', [])
+    if image_urls:
+        product_data['var_img'] = image_urls[0]
+    else:
+        product_data['var_img'] = ""
+
     # --- B. UPDATE LOGIC (If product_id exists - Rule 2) ---
     if product_id:
         status_to_set = 'UPD'
@@ -131,7 +137,7 @@ def upsert_single_variant(
                 descr = {}, cert = {}, opt_1 = {}, opt_2 = {}, opt_3 = {}, tags = {}, 
                 product_category = {}, type = {}, vendor = {}, inventory_tracker = {}, 
                 inventory_quantity = {}, debug_1 = {}, debug_2 = {}, debug_3 = {},
-                handle = {}, status = {} 
+                handle = {}, status_int = {}, status = {} 
             WHERE product_id = {}
         """).format(
             sql.Identifier(PRODUCT_TABLE),
@@ -155,8 +161,9 @@ def upsert_single_variant(
             sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))), 
+            sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))), 
             sql.Literal(status_to_set),
+            sql.Literal(prepare_data_for_sql(product_data.get("Status", None))),
             sql.Literal(product_id)
         )
         cursor.execute(update_product_query)
@@ -167,7 +174,7 @@ def upsert_single_variant(
         upsert_variant_query = sql.SQL("""
             INSERT INTO {} (
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
-                price, cost, compare, upc, weight, weight_grams, published, status, 
+                price, cost, compare, upc, weight, weight_grams, published, status_int, 
                 debug_1, debug_2, debug_3, vendor
             )
             VALUES (
@@ -183,8 +190,8 @@ def upsert_single_variant(
             # Variant VALUES (using single product_data dict)
             sql.Literal(target_sku), 
             sql.Literal(product_id),
-            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("var_img", None))),
             sql.Literal(prepare_data_for_sql(target_sku)),
             sql.Literal(prepare_data_for_sql(product_data.get("Option1 value", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("Option2 value", None))),
@@ -216,12 +223,12 @@ def upsert_single_variant(
             INSERT INTO {} (
                 cat, url, cat_name, title, sku, image_url, descr, cert, opt_1, opt_2, opt_3, 
                 tags, product_category, type, vendor, inventory_tracker, inventory_quantity, 
-                debug_1, debug_2, debug_3, handle, status
+                debug_1, debug_2, debug_3, handle, status_int, status
             )
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 
                 {}, {}, {}, {}, {}, {}, 
-                {}, {}, {}, {}, {}
+                {}, {}, {}, {}, {}, {}
             )
             RETURNING product_id;
         """).format(
@@ -246,7 +253,8 @@ def upsert_single_variant(
             sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Status", None))),
             sql.Literal(status_to_set)
         )
         cursor.execute(insert_product_query)
@@ -266,8 +274,8 @@ def upsert_single_variant(
             sql.Identifier(VARIANT_LOOKUP_TABLE),
             sql.Literal(target_sku),
             sql.Literal(product_id),
-            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("Image Src", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("var_img", None))),
             sql.Literal(prepare_data_for_sql(target_sku)),
             sql.Literal(prepare_data_for_sql(product_data.get("Option1 value", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("Option2 value", None))),
@@ -337,7 +345,7 @@ def upsert_multi_variant(
                 descr = {}, cert = {}, opt_1 = {}, opt_2 = {}, opt_3 = {}, 
                 tags = {}, product_category = {}, type = {}, vendor = {}, 
                 inventory_tracker = {}, inventory_quantity = {}, debug_1 = {}, 
-                debug_2 = {}, debug_3 = {}, status = {} 
+                debug_2 = {}, debug_3 = {}, status_int = {}, status = {}, handle = {}
             WHERE product_id = {}
         """).format(
             sql.Identifier(PRODUCT_TABLE),
@@ -361,7 +369,10 @@ def upsert_multi_variant(
             sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
             sql.Literal(status_to_set),
+            sql.Literal(prepare_data_for_sql(product_data.get("Status", None))),
+            sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))),
             sql.Literal(product_id)
+            
         )
         cursor.execute(update_product_query)
 
@@ -391,7 +402,7 @@ def upsert_multi_variant(
                 sql.Identifier(VARIANT_LOOKUP_TABLE),
                 sql.Literal(var_sku),
                 sql.Literal(product_id),
-                sql.Literal(prepare_data_for_sql(variant.get("handle", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Handle", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Image Src", None))),
                 sql.Literal(var_sku),
                 sql.Literal(prepare_data_for_sql(variant.get("Option1 value", None))),
@@ -424,12 +435,12 @@ def upsert_multi_variant(
             INSERT INTO {} (
                 cat, url, cat_name, title, image_url, descr, cert, opt_1, opt_2, opt_3, 
                 tags, product_category, type, vendor, inventory_tracker, inventory_quantity, 
-                debug_1, debug_2, debug_3, handle, status
+                debug_1, debug_2, debug_3, handle, status_int, status
             )
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 
                 {}, {}, {}, {}, {}, {}, 
-                {}, {}, {}, {}
+                {}, {}, {}, {}, {}
             )
             RETURNING product_id;
         """).format(
@@ -453,8 +464,9 @@ def upsert_multi_variant(
             sql.Literal(prepare_data_for_sql(product_data.get("debug_1", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_2", None))),
             sql.Literal(prepare_data_for_sql(product_data.get("debug_3", None))),
-            sql.Literal(prepare_data_for_sql(product_data.get("handle", None))),
-            sql.Literal(status_to_set)
+            sql.Literal(prepare_data_for_sql(product_data.get("Handle", None))),
+            sql.Literal(status_to_set),
+            sql.Literal(prepare_data_for_sql(product_data.get("Status", None)))
         )
 
 
@@ -481,7 +493,7 @@ def upsert_multi_variant(
                 sql.Identifier(VARIANT_LOOKUP_TABLE),
                 sql.Literal(var_sku),
                 sql.Literal(product_id),
-                sql.Literal(prepare_data_for_sql(variant.get("handle", None))),
+                sql.Literal(prepare_data_for_sql(variant.get("Handle", None))),
                 sql.Literal(prepare_data_for_sql(variant.get("Image Src", None))),
                 sql.Literal(var_sku),
                 sql.Literal(prepare_data_for_sql(variant.get("Option1 value", None))),
@@ -558,6 +570,16 @@ def debug(urls_stats, prod_stats):
         missing_df.to_csv("../data/debug_missed_urls.csv", index=False)
         print(f"Found {len(missing_df)} missing URL(s). Written to debug_missed_urls.csv")
 
+
+def create_url_handle(title, sku=None):
+    if pd.isna(title) or title == '':
+        return np.nan # Or some default handle if title is missing
+    # Simple example: replace spaces with hyphens and lowercase
+    handle_title = str(title).lower().replace(' ', '_').replace(',', '').replace('(', '').replace(')', '')
+    handle_sku = str(sku).lower().replace(' ', '_').replace(',', '') if pd.notna(sku) and sku != '' else ''
+    if handle_sku:
+        return f"{handle_title}_{handle_sku}"
+    return handle_title
 
 def extract_sku_from_shopify_meta(soup, var_name):
     """
@@ -883,6 +905,8 @@ def scrape_products_all():
                     "Vendor": "KBeauty",
                     "Option1 name": "",
                     "Option1 value": "",
+                    "Handle": create_url_handle(name, sku),
+                    "Status": 'draft'
 
                 }
     # Parse product variant data if any
@@ -953,6 +977,8 @@ def scrape_products_all():
             var_to_add['Vendor'] = "KBeauty"
             var_to_add['Option1 name'] = button_name
             var_to_add['Option1 value'] = button_value
+            var_to_add['Handle'] = ''
+            var_to_add['Status'] = ''
             variants_data.append(var_to_add)
            
 
@@ -1027,6 +1053,8 @@ def scrape_products_all():
                     var_to_add['Vendor'] = "KBeauty"
                     var_to_add['Option1 name'] = button_name
                     var_to_add['Option1 value'] = button_value
+                    var_to_add['Handle'] = ''
+                    var_to_add['Status'] = ''
                     variants_data.append(var_to_add)
                 else:
                     continue
@@ -1114,6 +1142,8 @@ def scrape_products_all():
                             var_to_add['Vendor'] = "Vendor"
                             var_to_add['Option1 name'] = option_name
                             var_to_add['Option1 value'] = option_value
+                            var_to_add['Handle'] = ''
+                            var_to_add['Status'] = ''
                             variants_data.append(var_to_add)
                         except:
                             print("No option click")
@@ -1187,6 +1217,7 @@ def scrape_products_all():
             product["Option1 name"] = variants[0]['Option1 name']
             for variant in variants:
                 variant['Option1 name'] = ""
+                variant['Handle'] = product['Handle']
         
             product_to_save = [product]
             product_to_save.extend(variants)
