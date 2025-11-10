@@ -1,6 +1,0 @@
---- Pipeline Start (using Poetry): Thu Nov  6 10:24:27 AM UTC 2025 ---
-Log file: ../logs/kbeauty_log_20251106_102427.log
----------------------------------
-Starting Step 1: Running scraper_kbeauty.py
-/home/parser/.cache/pypoetry/virtualenvs/kbeauty-3Lsz9dQy-py3.13/bin/python: can't open file '/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py': [Errno 2] No such file or directory
-ERROR (2): scraper_kbeauty.py failed due to a Database Error.
