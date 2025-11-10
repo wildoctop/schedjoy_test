@@ -1,9 +1,0 @@
---- Pipeline Start (using Poetry): Thu Nov  6 10:26:10 AM UTC 2025 ---
-Log file: ../logs/kbeauty_log_20251106_102610.log
----------------------------------
-Starting Step 1: Running scraper_kbeauty.py
-  File "/home/parser/schedjoy_test/kbeuaty/scripts/scraper_kbeauty.py", line 71
-    VARIANT_LOOKUP_TABLE = variant_db'
-                                     ^
-SyntaxError: unterminated string literal (detected at line 71)
-FATAL ERROR (1): scraper_kbeauty.py failed.
