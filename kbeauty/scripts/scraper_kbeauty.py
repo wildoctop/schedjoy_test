@@ -120,8 +120,8 @@ def upsert_single_variant(
     product_id = result[0] if result else None
     
     db_status = None
-
-    image_urls: List[str] = product_data.get('img', [])
+    image_urls: List[str] = product_data.get('Image Src', [])
+    image_urls = list(image_urls)
     if image_urls:
         product_data['var_img'] = image_urls[0]
     else:
@@ -226,7 +226,7 @@ def upsert_single_variant(
             INSERT INTO {} (
                 cat, url, cat_name, title, sku, image_url, descr, cert, opt_1, opt_2, opt_3, 
                 tags, product_category, type, vendor, inventory_tracker, inventory_quantity, 
-                debug_1, debug_2, debug_3, handle, status_int, status
+                debug_1, debug_2, debug_3, handle, status, status_int
             )
             VALUES (
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, 
@@ -266,8 +266,8 @@ def upsert_single_variant(
         # 2. Variant Table INSERT (for the single variant)
         insert_variant_query = sql.SQL("""
             INSERT INTO {} (
-                var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
-                price, cost, compare, upc, weight, weight_grams, published, status, 
+                var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val,
+                price, cost, compare, upc, weight, weight_grams, published, status_int,
                 debug_1, debug_2, debug_3, vendor
             )
             VALUES (
@@ -486,7 +486,7 @@ def upsert_multi_variant(
             insert_variant_query = sql.SQL("""
                 INSERT INTO {} (
                     var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
-                    price, cost, compare, upc, weight, weight_grams, published, status, 
+                    price, cost, compare, upc, weight, weight_grams, published, status_int, 
                     debug_1, debug_2, debug_3, vendor
                 )
                 VALUES (

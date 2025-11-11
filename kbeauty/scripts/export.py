@@ -19,7 +19,7 @@ DB_PASS = os.getenv("DB_PASS")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 WEBSITE = os.getenv("WEBSITE")
-
+VENDOR = os.getenv("VENDOR")
 
 
 DB_CONFIG = {
@@ -170,14 +170,15 @@ def export_and_manage_data():
         variant_select_query = sql.SQL("""
             SELECT 
                 var_id, product_id, handle, var_image_url, sku, opt_1_val, opt_2_val, opt_3_val, 
-                price, cost, compare, upc, weight, weight_grams, published, status, status_int 
+                price, cost, compare, upc, weight, weight_grams, published, status_int, 
                 debug_1, debug_2, debug_3
             FROM {} 
-            WHERE status IN {}
+            WHERE status_int IN {} AND vendor = VENDOR
             ORDER BY product_id, sku;
         """).format(
             sql.Identifier(VARIANT_TABLE),
-            sql.Literal(TARGET_STATUSES) 
+            sql.Literal(TARGET_STATUSES),
+            sql.Literal(VENDOR)
         )
 
         cursor.execute(variant_select_query)
@@ -273,10 +274,12 @@ def export_and_manage_data():
                         # A. Separate for Output Files
                         if parent_status in STATUS_MAP:
                             # Save the raw product data
-                            parent_row['status_int'] = parent_status 
+                            parent_row['status_int'] = parent_status
                             separated_data[parent_status].append(parent_row)
+                            parent_row['sku'] = ''
                         else:
                             parent_row['status_int'] = parent_status
+                            parent_row['sku'] = ''
                             draft_data.append(parent_row)
                             
                         # B. Prepare Archive Copy 
@@ -307,7 +310,7 @@ def export_and_manage_data():
         print("\n--- Exporting CSV Files ---")
         for status, filename in STATUS_MAP.items():
             filename = os.path.join(OUTPUT_DIR, filename)
-            process_and_save_data(separated_data[status_int], filename, FINAL_COLUMNS)
+            process_and_save_data(separated_data[status], filename, FINAL_COLUMNS)
 
         # b. Write TO_DRAFT file
         d_filename = os.path.join(OUTPUT_DIR, "to_draft.csv")
