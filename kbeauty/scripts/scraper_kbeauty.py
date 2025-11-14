@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from urllib3.exceptions import ReadTimeoutError
 from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException
 import csv
 import os
@@ -42,6 +43,7 @@ DB_CONFIG = {
 
 # TRUE - IF URL LIST .CSV FILE IS READY
 CSV_READY = True
+
 CSV = '../data/kbeauty_url.csv'
 PROD_DEBUG_FILE = '../data/debug_kbeauty.log'
 URL_DEBUG_FILE = '../data/debug_kbeauty_url.log'
@@ -801,7 +803,7 @@ def fetch_page(url, driver):
             else:
                 print("Max retries reached. Failing.")
             # Re-raise the exception or handle the failure gracefully
-                raise
+                return None
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             return None
@@ -835,7 +837,7 @@ def scrape_products_all():
                     if product_count_span:
                         product_count_span.decompose()
                     cat_name = cat_name_el.text.strip() 
-                cat_urls.append({'type': 'https://kbeauty.ca/collections', 'url': f"https://kbeauty.ca{cat_url}", 'name': cat_name})
+                    cat_urls.append({'type': 'https://kbeauty.ca/collections', 'url': f"https://kbeauty.ca{cat_url}", 'name': cat_name})
                 page += 1
             for cat in cat_urls:
                 url = cat['url']
@@ -933,12 +935,13 @@ def scrape_products_all():
         driver.get(url)
 
         variants_data= []
+        buttons = None
+        options = None
 
-
-
-        var_block = driver.find_elements(By.CSS_SELECTOR, "div[class='product__controls-group product__variants-wrapper product__block product__block--medium']")
-        buttons = var_block[0].find_elements(By.CSS_SELECTOR, "button[type='button']")
-        options = var_block[0].find_elements(By.CSS_SELECTOR, "select[id='option1']")
+        if driver.find_elements(By.CSS_SELECTOR, "div[class='product__controls-group product__variants-wrapper product__block product__block--medium']"):
+            var_block = driver.find_elements(By.CSS_SELECTOR, "div[class='product__controls-group product__variants-wrapper product__block product__block--medium']")
+            buttons = var_block[0].find_elements(By.CSS_SELECTOR, "button[type='button']")
+            options = var_block[0].find_elements(By.CSS_SELECTOR, "select[id='option1']")
 
         if buttons:
             print("len(buttons) = ", len(buttons))
@@ -1207,7 +1210,8 @@ def scrape_products_all():
         url = element['url']
         name = element['name']
         print(f'Parsing product {url}')
-            
+        db_status =  ''
+        product_id = ''     
         prod_html = fetch_page(url, driver)
         if prod_html:
             prod_soup = bs(prod_html, "lxml")
@@ -1228,25 +1232,26 @@ def scrape_products_all():
         if prod_soup.select("div[class='product__controls-group product__variants-wrapper product__block product__block--medium']"):
             
             variants = parse_variant(url, driver)
-            print(variants) 
-            product['Variant SKU'] = ''
-            product['Variant Price'] = ''
-            product['Variant Compare At Price'] = ''
-            product["Option1 name"] = variants[0]['Option1 name']
-            for variant in variants:
-                variant['Option1 name'] = ""
-                variant['Handle'] = product['Handle']
+            if len(variants) > 0:
+                product['Variant SKU'] = ''
+                product['Variant Price'] = ''
+                product['Variant Compare At Price'] = ''
+                product["Option1 name"] = variants[0]['Option1 name']
+                for variant in variants:
+                    variant['Option1 name'] = ""
+                    variant['Handle'] = product['Handle']
         
-            product_to_save = [product]
-            product_to_save.extend(variants)
-            variants_list = variants
-            db_status, product_id = upsert_product_data(product, variants_list, cursor)
-            conn.commit()
+                product_to_save = [product]
+                product_to_save.extend(variants)
+                variants_list = variants
+                print(variants_list)
+                db_status, product_id = upsert_product_data(product, variants_list, cursor)
+                conn.commit()
         else:
             product_to_save = [product]
             db_status, product_id = upsert_product_data(product, [], cursor)
             conn.commit()
-        
+       
         product_count += 1
         prod_stats.append({'url': url, 'status': db_status, 'product_id': product_id, 'product_count': product_count})
     
