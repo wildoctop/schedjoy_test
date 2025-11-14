@@ -115,6 +115,27 @@ FINAL_COLUMNS = [
     'status_int'
 ]
 
+def replace_cat_optimized(df, old_cat, new_cat, replacement_map=None):
+    df[new_cat] = ''
+    
+    # 1. Create a mapping dictionary for easier lookup, ensuring keys are stripped of whitespace
+    # This also handles escaping special regex characters
+    rev_map = {re.escape(k.strip()): v for k, v in replacement_map.items()}
+    
+    # 2. Build the pattern by joining all keys
+    pattern = '|'.join(rev_map.keys())
+
+    # 3. Use str.findall to get all matches for each cell.
+    # The findall will return the exact substring that was matched from the original string.
+    # Add a word boundary or a simple lookaround to ensure you're matching a full token, not a substring
+    matches = df[old_cat].astype(str).str.findall(f'({pattern})')
+    
+    # 4. Map the found matches to their new categories
+    df[new_cat] = matches.apply(
+        lambda x: ', '.join(sorted(list(set(rev_map[re.escape(m.strip())] for m in x)))) if x else ''
+    )
+    return df
+
 def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_columns: List[str]):
     """
     Converts a list of dictionaries into a DataFrame, renames and 
@@ -138,7 +159,66 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df['Variant Price'] = df['Variant Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Cost per item'] = df['Cost per item'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
-    columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item']
+    
+    type_replacement_mapping = {
+           "Facial Cleansers" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Facial Cleansers",
+           "Toners" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Toners & Astringents",
+           "Exfoliators" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Skin Care Masks & Peels",
+           "Sheet Masks" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Skin Care Masks & Peels",
+           "Serums" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Face Serums",
+           "Emulsions & Essences" : "Health & Beauty > Personal Care > Cosmetics > Skin Care",
+           "Moisturizers" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Face Moisturizers",
+           "Gel Moisturizers" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Face Moisturizers",
+           "Eye Care / Eye and Lips" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Eye Creams",
+           "Lip Balm" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Lip Balms & Treatments > Lip Balms",
+           "Makeup Removers" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Makeup Removers",
+           "Skincare Kits" : "Health & Beauty > Personal Care > Cosmetics > Cosmetic Tools > Skin Care Tools",
+           "Perfume" : "Health & Beauty > Personal Care > Cosmetics > Perfumes & Colognes",
+           "Bath & Shower" : "Health & Beauty > Personal Care > Cosmetics > Bath & Body",
+           "Hand & Foot Cream" : "Health & Beauty > Personal Care > Cosmetics > Skin Care > Hand Creams",
+           "Hair Color" : "Health & Beauty > Personal Care > Hair Care > Hair Color",
+           "Hair Styling" : "Health & Beauty > Personal Care > Hair Care > Hair Styling Products",
+           "MakeUp": "Health & Beauty > Personal Care > Cosmetics > Makeup"
+
+        }
+    df = replace_cat_optimized(
+            df,
+            old_cat='cat_name',
+            new_cat='Product category',
+            replacement_map=type_replacement_mapping
+        ) 
+
+    type_replacement_mapping = {
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Facial Cleansers": "Facial Cleansers",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Toners & Astringents": "Toners & Astringents",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Skin Care Masks & Peels": "Skin Care Masks & Peels",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Skin Care Masks & Peels": "Skin Care Masks & Peels",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Face Serums": "Face Serums",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care": "Skin Care",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Face Moisturizers": "Face Moisturizers",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Face Moisturizers": "Face Moisturizers",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Eye Creams": "Eye Creams",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Lip Balms & Treatments > Lip Balms": "Lip Balms",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Makeup Removers": "Makeup Removers",
+           "Health & Beauty > Personal Care > Cosmetics > Cosmetic Tools > Skin Care Tools": "Skin Care Tools",
+           "Health & Beauty > Personal Care > Cosmetics > Perfumes & Colognes": "Perfumes & Colognes",
+           "Health & Beauty > Personal Care > Cosmetics > Bath & Body": "Bath & Body",
+           "Health & Beauty > Personal Care > Cosmetics > Skin Care > Hand Creams": "Hand Creams",
+           "Health & Beauty > Personal Care > Hair Care > Hair Color": "Hair Color",
+           "Health & Beauty > Personal Care > Hair Care > Hair Styling Products": "Hair Styling Products",
+           "Health & Beauty > Personal Care > Cosmetics > Makeup": "Makeup"
+           }
+        
+    df = replace_cat_optimized(
+            df,
+            old_cat='Product category',
+            new_cat='Type',
+            replacement_map=type_replacement_mapping
+        ) 
+    
+    df['Tags'] = df['cat_name']
+    
+    columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item', 'Type', 'Tags', 'Product category']
         
     df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "")
     # 4. Save to CSV
