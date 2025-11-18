@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import psycopg2
 import csv
