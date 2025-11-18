@@ -1,0 +1,30 @@
+[project]
+name = "kbeauty"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "wildoctop",email = "mrwildoctopus@gmail.com"}
+]
+requires-python = ">=3.13"
+dependencies = [
+    "requests (>=2.32.3,<3.0.0)",
+    "beautifulsoup4 (>=4.13.3,<5.0.0)",
+    "lxml (>=5.3.1,<6.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "selenium (>=4.35.0,<5.0.0)",
+    "bs4 (>=0.0.2,<0.0.3)",
+    "playwright (>=1.51.0,<2.0.0)",
+    "fake-useragent (>=2.2.0,<3.0.0)",
+    "webdriver-manager (>=4.0.2,<5.0.0)",
+    "psycopg2-binary (>=2.9.11,<3.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "scripts"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.dotenv]
+path = "local.env"
