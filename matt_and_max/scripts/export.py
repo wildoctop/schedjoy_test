@@ -115,7 +115,15 @@ FINAL_COLUMNS = [
     'status_int'
 ]
 
-
+def create_url_handle(title, sku=None):
+    if pd.isna(title) or title == '':
+        return np.nan # Or some default handle if title is missing
+    # Simple example: replace spaces with hyphens and lowercase
+    handle_title = str(title).lower().replace(' ', '_').replace(',', '').replace('(', '').replace(')', '')
+    handle_sku = str(sku).lower().replace(' ', '_').replace(',', '') if pd.notna(sku) and sku != '' else ''
+    if handle_sku:
+        return f"{handle_title}_{handle_sku}"
+    return handle_title
 
 
 def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_columns: List[str]):
@@ -142,7 +150,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Cost per item'] = df['Cost per item'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     
-    
+    df['Handle'] = df.apply(lambda row: create_url_handle(row['Title'], row['Variant SKU']), axis=1)
     
     columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item']
         
@@ -273,7 +281,7 @@ def export_and_manage_data():
                 
                 # Now, proceed to iterate through the variants
                 for variant_row in variants:
-                    
+                    variant_row['var_img'] = parent_row['Image Src']
                     # --- 1. PROCESS AND SAVE PARENT ROW (Executed only once per PID) ---
                     if not parent_written:
                         

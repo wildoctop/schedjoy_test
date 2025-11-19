@@ -170,7 +170,7 @@ def upsert_single_variant(
     image_urls: List[str] = product_data.get('Image Src', [])
     image_urls = list(image_urls)
     if image_urls:
-        product_data['var_img'] = image_urls[0]
+        product_data['var_img'] = product_data.get('Image Src', [])
     else:
         product_data['var_img'] = ""
 
@@ -936,6 +936,8 @@ def scrape_products_all():
                     upc = upc_bl[0].select_one('div').text.strip()
                 else:
                     upc = ''
+                
+                handle = create_url_handle(name, sku)
                 return { # Add product data as a single row
                     "cat": page,
                     "url": url,
@@ -948,7 +950,8 @@ def scrape_products_all():
                     'Variant Barcode': upc,
                     'Variant Price': price,
                     'Variant Compare At Price': compare_at_price,
-                    'Vendor': 'Matt and Max'
+                    'Vendor': 'Matt and Max',
+                    'Handle': handle
                 }
             else:
                 return { # Add product data as a single row
@@ -963,7 +966,8 @@ def scrape_products_all():
                     'Variant Barcode': '',
                     'Variant Price': '',
                     'Variant Compare At Price': '',
-                    'Vendor': 'Matt and Max'
+                    'Vendor': 'Matt and Max',
+                    'Handle': ''
                 }
     driver = setup_driver()
     url_count = 0
