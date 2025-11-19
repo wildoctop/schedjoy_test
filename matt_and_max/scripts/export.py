@@ -349,7 +349,7 @@ def export_and_manage_data():
 
         
         # Iterate through transitions and apply updates
-        '''for old_status, new_status in STATUS_TRANSITIONS.items():
+        for old_status, new_status in STATUS_TRANSITIONS.items():
             skus_to_update = skus_by_status.get(old_status)
             
             if skus_to_update:
@@ -366,7 +366,7 @@ def export_and_manage_data():
                 )
                 
                 cursor.execute(update_query)
-                print(f"Updated {cursor.rowcount} variants from '{old_status}' to '{new_status}'.")'''
+                print(f"Updated {cursor.rowcount} variants from '{old_status}' to '{new_status}'.")
         
         
         # --- STEP 6. Commit and Cleanup ---

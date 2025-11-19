@@ -41,7 +41,7 @@ DB_CONFIG = {
 
 
 # TRUE - IF URL LIST .CSV FILE IS READY
-CSV_READY = True
+CSV_READY = False
 CSV = '../data/matt_and_max_url.csv'
 PROD_DEBUG_FILE = '../data/debug_matt_and_max.log'
 URL_DEBUG_FILE = '../data/debug_matt_and_max_url.log'
@@ -156,7 +156,7 @@ def upsert_single_variant(
     target_sku: str, 
     cursor
 ) -> Tuple[Optional[str], Optional[int]]:
-
+    target_sku = str(target_sku)
     # A. LOOKUP by SKU
     select_query = sql.SQL("SELECT product_id FROM {} WHERE sku = {}").format(
         sql.Identifier(PRODUCT_TABLE),
@@ -825,7 +825,7 @@ def scrape_products_all():
     products = []
 
     # Get product sourse
-    def fetch_page(url):
+    def fetch_page(url, driver):
         try:
             driver.get(url)
             time.sleep(2)
@@ -842,7 +842,7 @@ def scrape_products_all():
         urls_stats = []
         for page in pages:
             url = page
-            html = fetch_page(url)
+            html = fetch_page(url, driver)
             try:
                 view_all_but = WebDriverWait(driver, 1).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.hidden.sm\\:flex.border-l.border-gray-2.px-2.lg\\:px-4.flex.items-center"))
@@ -942,7 +942,7 @@ def scrape_products_all():
                     "brand": brand,
                     "category": cat,
                     "Title": name,
-                    "Variant SKU'" : sku,
+                    "Variant SKU" : sku,
                     "Image Src": image_url,
                     "Body (HTML)": desc,
                     'Variant Barcode': upc,
@@ -957,7 +957,7 @@ def scrape_products_all():
                     "brand": '',
                     "category": '',
                     "Title": '',
-                    "Variant SKU'" : '',
+                    "Variant SKU" : '',
                     "Image Src": '',
                     "Body (HTML)": '',
                     'Variant Barcode': '',
@@ -970,10 +970,10 @@ def scrape_products_all():
     product_count = 0
     stats = []
     prod_stats = []
-    open(PROD_DEBUG_FILE, 'w', encoding='utf-8').close()
+    # open(PROD_DEBUG_FILE, 'w', encoding='utf-8').close()
 
 
-    product_urls, urls_stats = get_product_urls(driver, url_count)
+    product_urls, urls_stats = get_product_urls()
 
     conn = None
     try:
