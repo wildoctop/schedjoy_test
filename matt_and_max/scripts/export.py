@@ -150,11 +150,86 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Cost per item'] = df['Cost per item'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     
-    df['Handle'] = df.apply(lambda row: create_url_handle(row['Title'], row['Variant SKU']), axis=1)
+
     
     columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item']
         
-    df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "")
+    df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "").replace("N/A", "")
+
+    
+    for i in range(len(df)):
+            if pd.notnull(df.loc[i, 'Title']): 
+                if i < len(df) - 1 and (pd.isna(df.loc[i + 1, 'Title']) or df.loc[i + 1, 'Title'] == ''):
+                    df.loc[i, 'is_variant_parent'] = True
+
+    parent_indices = df[df['is_variant_parent'] == True].index
+    variant_indices = []
+    for idx in parent_indices:
+        next_parent_idx = parent_indices[parent_indices > idx].min() if len(parent_indices[parent_indices > idx]) > 0 else len(df)
+        for i in range(idx + 1, next_parent_idx):
+            row = df.loc[i]
+            if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
+                variant_indices.append(i)
+    
+    parent_indices = df[df['is_variant_parent'] == True].index
+    for idx in parent_indices:
+        title = df.loc[idx, 'Title']
+        first_variant_sku = None
+        next_parent_idx = parent_indices[parent_indices > idx].min() if any(parent_indices > idx) else len(df)
+        variant_indices = []
+        for i in range(idx + 1, next_parent_idx):
+            row = df.loc[i]
+            if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
+                    variant_indices.append(i)
+            handle = None
+
+        if variant_indices:
+            first_variant_sku = df.loc[variant_indices[0], 'Variant SKU'] # get the first sku
+            handle = create_url_handle(title, first_variant_sku)  # Generate handle
+            df.loc[idx, 'Handle'] = handle  
+
+            for variant_idx in variant_indices:
+                df.loc[variant_idx, 'Handle'] = handle
+
+        # Create variant image URL
+       
+                
+        
+        #  Create handles for products without variants
+    is_variant_mask = pd.notnull(df['Variant SKU']) & (pd.isnull(df['Title']) | (df['Title'] == '')) 
+    standalone_mask = ~(df['is_variant_parent'] | is_variant_mask)
+    new_handles = pd.Series(np.nan, index=df.index, dtype='object')
+
+    new_handles[standalone_mask] = df.loc[standalone_mask].apply(
+        lambda row: create_url_handle(row['Title'], row['Variant SKU']), axis=1
+        )
+
+    df.loc[standalone_mask, 'Handle'] = new_handles[standalone_mask]
+        
+    
+    expanded_rows = []
+    for index, row in df.iterrows():
+        urls_str = str(row['Image Src'])
+        urls = [url.strip() for url in urls_str.split(',') if url.strip()]
+        current_url_handle = row['Handle']
+
+        if not urls:
+            expanded_rows.append(row.to_dict())
+            continue
+
+        first_url_row = row.copy()
+        first_url_row['Variant Image'] = urls[0]
+        first_url_row['Image Src'] = ''
+        expanded_rows.append(first_url_row.to_dict())
+
+        for i in range(1, len(urls)):
+            new_row_data = {col: None for col in df.columns}
+            new_row_data['Image Src'] = urls[i]
+            new_row_data['Handle'] = current_url_handle
+            
+            expanded_rows.append(new_row_data)
+
+    df = pd.DataFrame(expanded_rows)
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
     print(f"Successfully saved {len(data_list)} rows to {filename}")
