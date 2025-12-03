@@ -219,6 +219,29 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     
     df['Tags'] = df['cat_name']
     
+    expanded_rows = []
+    for index, row in df.iterrows():
+        urls_str = str(row['Image Src'])
+        urls = [url.strip() for url in urls_str.split(',') if url.strip()]
+        current_url_handle = row['Handle']
+
+        if not urls:
+            expanded_rows.append(row.to_dict())
+            continue
+
+        first_url_row = row.copy()
+        first_url_row['Variant Image'] = urls[0]
+        first_url_row['Image Src'] = ''
+        expanded_rows.append(first_url_row.to_dict())
+
+        for i in range(1, len(urls)):
+            new_row_data = {col: None for col in df.columns}
+            new_row_data['Image Src'] = urls[i]
+            new_row_data['Handle'] = current_url_handle
+            
+            expanded_rows.append(new_row_data)
+    df = pd.DataFrame(expanded_rows)
+    
     columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item', 'Type', 'Tags', 'Product category']
         
     df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "")
