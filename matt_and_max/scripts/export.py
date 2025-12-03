@@ -184,8 +184,8 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
 
             for variant_idx in variant_indices:
   
-                df.loc[variant_idx, 'Handle'] = handle
                 df.loc[variant_idx, 'Variant Handle'] = handle
+                df.loc[variant_idx, 'Handle'] = df.loc[variant_idx, 'Variant Handle']
 
         # Create variant image URL
        
@@ -225,9 +225,8 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             
             expanded_rows.append(new_row_data)
     df = pd.DataFrame(expanded_rows)
-
+    df['Barcode'] = df['Variant Barcode'].astype(str).str.replace("UPC ", "", regex=False)
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
-    df['Barcode'] = df['Variant Barcode'].str.replace("UPC ", "", regex=False)
     
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
