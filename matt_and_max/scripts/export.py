@@ -228,7 +228,10 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df = pd.DataFrame(expanded_rows)
     df['Barcode'] = df['Variant Barcode'].astype(str).str.replace("UPC ", "", regex=False)
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
-    
+    df.loc[
+    df['Variant Handle'].notna() & (df['Variant Handle'] != ''),
+    'Handle'
+    ] = df['Variant Handle']
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
     print(f"Successfully saved {len(data_list)} rows to {filename}")
