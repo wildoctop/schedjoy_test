@@ -171,11 +171,12 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
         first_variant_sku = None
         next_parent_idx = parent_indices[parent_indices > idx].min() if any(parent_indices > idx) else len(df)
         variant_indices = []
+        handle = None
         for i in range(idx + 1, next_parent_idx):
             row = df.loc[i]
             if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
                     variant_indices.append(i)
-            handle = None
+            
 
         if variant_indices:
             first_variant_sku = df.loc[variant_indices[0], 'Variant SKU'] # get the first sku
