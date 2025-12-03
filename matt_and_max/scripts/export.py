@@ -226,8 +226,9 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             
             expanded_rows.append(new_row_data)
     df = pd.DataFrame(expanded_rows)
-    df['Barcode'] = df['Variant Barcode'].astype(str).str.replace("UPC ", "", regex=False)
+    df['Variant Barcode'] = df['Variant Barcode'].astype(str).str.replace("UPC ", "", regex=False)
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
+    df['Barcode'] = df['Variant Barcode'].replace("nan", "").replace("None", "").replace("N/A", "")
     df.loc[
     df['Variant Handle'].notna() & (df['Variant Handle'] != ''),
     'Handle'
