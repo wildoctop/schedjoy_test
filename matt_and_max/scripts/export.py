@@ -174,7 +174,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
         for i in range(idx + 1, next_parent_idx):
             row = df.loc[i]
             if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
-                    variant_indices.append(row)
+                    variant_indices.append(i)
             handle = None
 
         if variant_indices:
@@ -183,6 +183,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             df.loc[idx, 'Handle'] = handle  
 
             for variant_idx in variant_indices:
+                print(variant_idx)
                 df.loc[variant_idx, 'Handle'] = handle
 
         # Create variant image URL
