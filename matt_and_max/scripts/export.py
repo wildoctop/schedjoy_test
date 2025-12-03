@@ -181,9 +181,10 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             first_variant_sku = df.loc[variant_indices[0], 'Variant SKU'] # get the first sku
             handle = create_url_handle(title, first_variant_sku)  # Generate handle
             df.loc[idx, 'Handle'] = handle  
+            print(df.loc[idx, 'Handle'])
 
             for variant_idx in variant_indices:
-                print(variant_idx)
+  
                 df.loc[variant_idx, 'Handle'] = handle
 
         # Create variant image URL
@@ -223,10 +224,11 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             new_row_data['Handle'] = current_url_handle
             
             expanded_rows.append(new_row_data)
+    df = pd.DataFrame(expanded_rows)
 
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
     df['Barcode'] = df['Variant Barcode'].replace("UPC ", "")
-    df = pd.DataFrame(expanded_rows)
+    
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
     print(f"Successfully saved {len(data_list)} rows to {filename}")
