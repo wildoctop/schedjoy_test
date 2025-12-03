@@ -242,7 +242,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             expanded_rows.append(new_row_data)
     df = pd.DataFrame(expanded_rows)
     
-    columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item', 'Type', 'Tags', 'Product category']
+    columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item', 'Type', 'Tags', 'Product category', 'Variant Image']
         
     df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "")
     # 4. Save to CSV
