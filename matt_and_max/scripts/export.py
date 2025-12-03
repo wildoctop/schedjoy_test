@@ -174,8 +174,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
         for i in range(idx + 1, next_parent_idx):
             row = df.loc[i]
             if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
-                    print(i)
-                    variant_indices.append(i)
+                    variant_indices.append(row)
             handle = None
 
         if variant_indices:
@@ -225,7 +224,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             expanded_rows.append(new_row_data)
 
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
-    df['Barcode'] = df['Barcode'].replace("UPC ", "")
+    df['Barcode'] = df['Variant Barcode'].replace("UPC ", "")
     df = pd.DataFrame(expanded_rows)
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
