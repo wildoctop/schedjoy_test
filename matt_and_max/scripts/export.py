@@ -356,7 +356,7 @@ def export_and_manage_data():
                 
                 # Now, proceed to iterate through the variants
                 for variant_row in variants:
-                    variant_row['var_img'] = parent_row['Image Src']
+                    variant_row['var_img'] = parent_row['image_url']
                     # --- 1. PROCESS AND SAVE PARENT ROW (Executed only once per PID) ---
                     if not parent_written:
                         
