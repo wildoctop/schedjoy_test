@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import psycopg2
 import csv
@@ -162,14 +163,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
                 if i < len(df) - 1 and (pd.isna(df.loc[i + 1, 'Title']) or df.loc[i + 1, 'Title'] == ''):
                     df.loc[i, 'is_variant_parent'] = True
 
-    parent_indices = df[df['is_variant_parent'] == True].index
-    variant_indices = []
-    for idx in parent_indices:
-        next_parent_idx = parent_indices[parent_indices > idx].min() if len(parent_indices[parent_indices > idx]) > 0 else len(df)
-        for i in range(idx + 1, next_parent_idx):
-            row = df.loc[i]
-            if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
-                variant_indices.append(i)
+   
     
     parent_indices = df[df['is_variant_parent'] == True].index
     for idx in parent_indices:
@@ -180,6 +174,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
         for i in range(idx + 1, next_parent_idx):
             row = df.loc[i]
             if pd.isna(row['Title']) and pd.notna(row['Variant SKU']):
+                    print(i)
                     variant_indices.append(i)
             handle = None
 
@@ -229,6 +224,8 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             
             expanded_rows.append(new_row_data)
 
+    df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
+    df['Barcode'] = df['Barcode'].replace("UPC ", "")
     df = pd.DataFrame(expanded_rows)
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
