@@ -257,7 +257,10 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
         product_rows = group[group['Title'].notna()]
         
         # Identify valid variant rows (SKU is not null)
-        variant_rows = group[group['Variant SKU'].notna()]
+        variant_rows = group[
+            df['Variant SKU'].notna() & # Has a SKU/Variant SKU value
+            df['Title'].isna()    # Title is null (Confirms it's a child/variant row)
+        ]
         
         # Identify the single main product row (should only be one)
         # We take the first one found, if any.
