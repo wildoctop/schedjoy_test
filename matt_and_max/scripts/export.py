@@ -146,6 +146,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     # 3. Reorder the columns using reindex (This is the most important step for order)
     # This also discards any columns not listed in FINAL_COLUMNS
     df = df.reindex(columns=FINAL_COLUMNS)
+    df['Variant Image'] = df['Variant Image'].astype(str)
     
     df['Variant Price'] = df['Variant Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
@@ -215,8 +216,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             continue
 
         first_url_row = row.copy()
-        first_url_row['Variant Image'] = urls[0]
-        first_url_row['Image Src'] = ''
+        first_url_row['Image Src'] = urls[0]
         expanded_rows.append(first_url_row.to_dict())
 
         for i in range(1, len(urls)):
