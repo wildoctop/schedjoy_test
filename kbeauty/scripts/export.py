@@ -44,7 +44,12 @@ if not os.path.exists(ARCHIVE_DIR):
     os.makedirs(ARCHIVE_DIR)
 
 # --- 1. Main Export and Transformation Function ---
-
+VARIANT_COLS_TO_MERGE = [
+    'SKU', 
+    'Variant Compare At Price', 
+    'Variant Price', 
+    'Variant Barcode'
+]
 
 COLUMN_RENAMES = {
     'title': 'Title',
@@ -242,6 +247,68 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             expanded_rows.append(new_row_data)
     df = pd.DataFrame(expanded_rows)
     
+    processed_rows = []
+    
+    # 1. Group by Handle
+    grouped = df.groupby('Handle')
+    
+    for handle, group in grouped:
+        # Identify the main product row (Title is not null)
+        product_rows = group[group['Title'].notna()]
+        
+        # Identify valid variant rows (SKU is not null)
+        variant_rows = group[group['SKU'].notna()]
+        
+        # Identify the single main product row (should only be one)
+        # We take the first one found, if any.
+        main_product_row_idx = product_rows.index[0] if not product_rows.empty else None
+        
+        # 2. Ignore other rows (neither main product nor valid variant)
+        # Any row that is not in product_rows or variant_rows is implicitly ignored 
+        # as we only process and append those two types.
+        
+        # --- LOGIC FOR SINGLE VARIANT MERGE ---
+        
+        if len(variant_rows) == 1 and main_product_row_idx is not None:
+            # Found a product with exactly one variant: MERGE
+            
+            variant_row_idx = variant_rows.index[0]
+            
+            # Get data for merging
+            variant_data = df.loc[variant_row_idx, VARIANT_COLS_TO_MERGE].to_dict()
+            
+            # Get the product row dictionary for modification
+            product_row_dict = df.loc[main_product_row_idx].to_dict()
+            
+            # Copy variant data to the product row
+            for col, value in variant_data.items():
+                product_row_dict[col] = value
+                
+            # Append the modified product row
+            processed_rows.append(product_row_dict)
+            
+            # The original variant row is implicitly DELETED by not being appended
+            
+        else:
+            # --- LOGIC FOR MULTIPLE VARIANTS OR MISSING PRODUCT ROW ---
+            # Append all product and variant rows unchanged
+            
+            # Combine the indices to keep, ensuring the product row is first
+            indices_to_keep = (
+                product_rows.index.tolist() + 
+                variant_rows.index.tolist()
+            )
+            # Remove duplicates and preserve order (product row before variants)
+            unique_indices = sorted(list(set(indices_to_keep)), key=lambda x: (x != main_product_row_idx, x))
+
+            for idx in unique_indices:
+                processed_rows.append(df.loc[idx].to_dict())
+
+
+    # Create the final DataFrame from the processed rows
+    df = pd.DataFrame(processed_rows)
+    df = df.reset_index(drop=True)
+
     columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item', 'Type', 'Tags', 'Product category', 'Variant Image']
         
     df[columns_to_clean] = df[columns_to_clean].replace("nan", "").replace("None", "")
