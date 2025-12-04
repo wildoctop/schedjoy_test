@@ -235,8 +235,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             continue
 
         first_url_row = row.copy()
-        first_url_row['Variant Image'] = urls[0]
-        first_url_row['Image Src'] = ''
+        first_url_row['Image Src'] = urls[0]
         expanded_rows.append(first_url_row.to_dict())
 
         for i in range(1, len(urls)):
