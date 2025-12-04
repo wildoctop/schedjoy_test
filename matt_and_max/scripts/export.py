@@ -147,7 +147,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     # This also discards any columns not listed in FINAL_COLUMNS
     df = df.reindex(columns=FINAL_COLUMNS)
     df['Variant Image'] = df['Variant Image'].astype(str)
-    
+    df['Title'] = df['Vendor'] + ' ' + df['Title']
     df['Variant Price'] = df['Variant Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Cost per item'] = df['Cost per item'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
@@ -183,14 +183,14 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             first_variant_sku = df.loc[variant_indices[0], 'Variant SKU'] # get the first sku
             handle = create_url_handle(title, first_variant_sku)  # Generate handle
             df.loc[idx, 'Handle'] = handle  
-            urls_str = str(df.loc[idx, 'Image Src'])
-            urls = [url.strip() for url in urls_str.split(',') if url.strip()]
-            var_img = urls[0]
+            urls_str = str(df.loc[idx, 'Image Src']) #CHANGE
+            urls = [url.strip() for url in urls_str.split(',') if url.strip()] #CHANGE
+            var_img = urls[0] #CHANGE
 
             for variant_idx in variant_indices:
                 df.loc[variant_idx, 'Variant Handle'] = handle
                 df.loc[variant_idx, 'Handle'] = df.loc[variant_idx, 'Variant Handle']
-                df.loc[variant_idx, 'Variant Image'] = var_img
+                df.loc[variant_idx, 'Variant Image'] = var_img #CHANGE
 
         # Create variant image URL
        
@@ -232,7 +232,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df['Variant Barcode'] = df['Variant Barcode'].astype(str).str.replace("UPC ", "", regex=False)
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
     df['Image Src'] = df['Image Src'].replace("nan", "").replace("None", "").replace("N/A", "")
-    df['Barcode'] = df['Variant Barcode'].replace("nan", "").replace("None", "").replace("N/A", "")
+    df['Variant Barcode'] = df['Variant Barcode'].replace("nan", "").replace("None", "").replace("N/A", "")
     df.loc[
     df['Variant Handle'].notna() & (df['Variant Handle'] != ''),
     'Handle'
@@ -269,7 +269,7 @@ def export_and_manage_data():
                 price, cost, compare, upc, weight, weight_grams, published, status_int, 
                 debug_1, debug_2, debug_3
             FROM {} 
-            WHERE status_int IN {} AND vendor = VENDOR
+            WHERE status_int IN {} AND vendor = {}
             ORDER BY product_id, sku;
         """).format(
             sql.Identifier(VARIANT_TABLE),

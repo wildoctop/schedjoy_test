@@ -277,7 +277,7 @@ def export_and_manage_data():
                 price, cost, compare, upc, weight, weight_grams, published, status_int, 
                 debug_1, debug_2, debug_3
             FROM {} 
-            WHERE status_int IN {} AND vendor = VENDOR
+            WHERE status_int IN {} AND vendor = {}
             ORDER BY product_id, sku;
         """).format(
             sql.Identifier(VARIANT_TABLE),
