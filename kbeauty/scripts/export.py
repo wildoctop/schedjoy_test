@@ -278,8 +278,11 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             product_row_dict = df.loc[main_product_row_idx].to_dict()
             
             # Copy variant data to the product row
+            # This is where the merge happens. We check for non-null values 
+            # from the variant row to ensure we only overwrite if data exists.
             for col, value in variant_data.items():
-                product_row_dict[col] = value
+                if pd.notna(value):
+                    product_row_dict[col] = value
                 
             # 1. Append the modified (merged) product row
             processed_rows.append(product_row_dict)
@@ -287,14 +290,16 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             # 2. Append all auxiliary/image rows ("other rows")
             
             # Identify the indices of the product and variant row that are now replaced
-            indices_to_skip = {main_product_row_idx, variant_row_idx}
+            # We use a list for indices to drop from the group
+            indices_to_remove = [main_product_row_idx, variant_row_idx]
             
-            # Iterate through all original rows in the group
-            for idx in group.index:
-                if idx not in indices_to_skip:
-                    # This row is neither the product nor the single variant. 
-                    # It must be an image row or other auxiliary data. Append it "as is."
-                    processed_rows.append(df.loc[idx].to_dict())
+            # Drop the product and single variant row from the group to get the remaining auxiliary rows
+            # 'errors=ignore' handles cases where an index might not be in the group (though it should be)
+            auxiliary_rows_df = group.drop(index=indices_to_remove, errors='ignore')
+            
+            # Append these auxiliary rows to the processed_rows list
+            for _, aux_row in auxiliary_rows_df.iterrows():
+                processed_rows.append(aux_row.to_dict())
                     
         else:
             # --- LOGIC FOR MULTIPLE VARIANTS, ZERO VARIANTS, OR MISSING PRODUCT ROW ---
@@ -307,7 +312,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
 
     # Create the final DataFrame from the processed rows
     df = pd.DataFrame(processed_rows)
-    df = df.reset_index(drop=True)
+    df= df.reset_index(drop=True)
 
     columns_to_clean = ['Variant Price', 'Variant Compare At Price', 'Cost per item', 'Type', 'Tags', 'Product category', 'Variant Image']
         
