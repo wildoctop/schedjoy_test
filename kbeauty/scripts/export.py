@@ -45,7 +45,7 @@ if not os.path.exists(ARCHIVE_DIR):
 
 # --- 1. Main Export and Transformation Function ---
 VARIANT_COLS_TO_MERGE = [
-    'SKU', 
+    'Variant SKU', 
     'Variant Compare At Price', 
     'Variant Price', 
     'Variant Barcode'
@@ -257,18 +257,15 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
         product_rows = group[group['Title'].notna()]
         
         # Identify valid variant rows (SKU is not null)
-        variant_rows = group[group['SKU'].notna()]
+        variant_rows = group[group['Variant SKU'].notna()]
         
         # Identify the single main product row (should only be one)
         # We take the first one found, if any.
         main_product_row_idx = product_rows.index[0] if not product_rows.empty else None
         
-        # 2. Ignore other rows (neither main product nor valid variant)
-        # Any row that is not in product_rows or variant_rows is implicitly ignored 
-        # as we only process and append those two types.
-        
         # --- LOGIC FOR SINGLE VARIANT MERGE ---
         
+        # Check for exactly one variant AND a corresponding product row
         if len(variant_rows) == 1 and main_product_row_idx is not None:
             # Found a product with exactly one variant: MERGE
             
@@ -284,24 +281,27 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             for col, value in variant_data.items():
                 product_row_dict[col] = value
                 
-            # Append the modified product row
+            # 1. Append the modified (merged) product row
             processed_rows.append(product_row_dict)
             
-            # The original variant row is implicitly DELETED by not being appended
+            # 2. Append all auxiliary/image rows ("other rows")
             
+            # Identify the indices of the product and variant row that are now replaced
+            indices_to_skip = {main_product_row_idx, variant_row_idx}
+            
+            # Iterate through all original rows in the group
+            for idx in group.index:
+                if idx not in indices_to_skip:
+                    # This row is neither the product nor the single variant. 
+                    # It must be an image row or other auxiliary data. Append it "as is."
+                    processed_rows.append(df.loc[idx].to_dict())
+                    
         else:
-            # --- LOGIC FOR MULTIPLE VARIANTS OR MISSING PRODUCT ROW ---
-            # Append all product and variant rows unchanged
+            # --- LOGIC FOR MULTIPLE VARIANTS, ZERO VARIANTS, OR MISSING PRODUCT ROW ---
+            # Append all original rows in the group unchanged (as requested).
             
-            # Combine the indices to keep, ensuring the product row is first
-            indices_to_keep = (
-                product_rows.index.tolist() + 
-                variant_rows.index.tolist()
-            )
-            # Remove duplicates and preserve order (product row before variants)
-            unique_indices = sorted(list(set(indices_to_keep)), key=lambda x: (x != main_product_row_idx, x))
-
-            for idx in unique_indices:
+            # Append all rows from the current group, maintaining original order
+            for idx in group.index:
                 processed_rows.append(df.loc[idx].to_dict())
 
 
