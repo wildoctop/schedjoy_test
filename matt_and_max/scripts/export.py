@@ -183,11 +183,14 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
             first_variant_sku = df.loc[variant_indices[0], 'Variant SKU'] # get the first sku
             handle = create_url_handle(title, first_variant_sku)  # Generate handle
             df.loc[idx, 'Handle'] = handle  
+            urls_str = str(df.loc[idx, 'Image Src'])
+            urls = [url.strip() for url in urls_str.split(',') if url.strip()]
+            var_img = urls[0]
 
             for variant_idx in variant_indices:
-  
                 df.loc[variant_idx, 'Variant Handle'] = handle
                 df.loc[variant_idx, 'Handle'] = df.loc[variant_idx, 'Variant Handle']
+                df.loc[variant_idx, 'Variant Image'] = var_img
 
         # Create variant image URL
        
@@ -228,6 +231,7 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df = pd.DataFrame(expanded_rows)
     df['Variant Barcode'] = df['Variant Barcode'].astype(str).str.replace("UPC ", "", regex=False)
     df['Variant Image'] = df['Variant Image'].replace("nan", "").replace("None", "").replace("N/A", "")
+    df['Image Src'] = df['Image Src'].replace("nan", "").replace("None", "").replace("N/A", "")
     df['Barcode'] = df['Variant Barcode'].replace("nan", "").replace("None", "").replace("N/A", "")
     df.loc[
     df['Variant Handle'].notna() & (df['Variant Handle'] != ''),
