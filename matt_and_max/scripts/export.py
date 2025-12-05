@@ -237,6 +237,78 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     df['Variant Handle'].notna() & (df['Variant Handle'] != ''),
     'Handle'
     ] = df['Variant Handle']
+
+    processed_rows = []
+    
+    # 1. Group by Handle
+    grouped = df.groupby('Handle')
+    
+    for handle, group in grouped:
+        # Identify the main product row (Title is not null)
+        product_rows = group[group['Title'].notna()]
+        
+        # Identify valid variant rows (SKU is not null)
+        variant_rows = group[
+            df['Variant SKU'].notna() & # Has a SKU/Variant SKU value
+            df['Title'].isna()    # Title is null (Confirms it's a child/variant row)
+        ]
+        
+        # Identify the single main product row (should only be one)
+        # We take the first one found, if any.
+        main_product_row_idx = product_rows.index[0] if not product_rows.empty else None
+        
+        # --- LOGIC FOR SINGLE VARIANT MERGE ---
+        
+        # Check for exactly one variant AND a corresponding product row
+        if len(variant_rows) == 1 and main_product_row_idx is not None:
+            # Found a product with exactly one variant: MERGE
+            
+            variant_row_idx = variant_rows.index[0]
+            
+            # Get data for merging
+            variant_data = df.loc[variant_row_idx, VARIANT_COLS_TO_MERGE].to_dict()
+            
+            # Get the product row dictionary for modification
+            product_row_dict = df.loc[main_product_row_idx].to_dict()
+            
+            # Copy variant data to the product row
+            # This is where the merge happens. We check for non-null values 
+            # from the variant row to ensure we only overwrite if data exists.
+            for col, value in variant_data.items():
+                if pd.notna(value):
+                    product_row_dict[col] = value
+                
+            # 1. Append the modified (merged) product row
+            processed_rows.append(product_row_dict)
+            
+            # 2. Append all auxiliary/image rows ("other rows")
+            
+            # Identify the indices of the product and variant row that are now replaced
+            # We use a list for indices to drop from the group
+            indices_to_remove = [main_product_row_idx, variant_row_idx]
+            
+            # Drop the product and single variant row from the group to get the remaining auxiliary rows
+            # 'errors=ignore' handles cases where an index might not be in the group (though it should be)
+            auxiliary_rows_df = group.drop(index=indices_to_remove, errors='ignore')
+            
+            # Append these auxiliary rows to the processed_rows list
+            for _, aux_row in auxiliary_rows_df.iterrows():
+                processed_rows.append(aux_row.to_dict())
+                    
+        else:
+            # --- LOGIC FOR MULTIPLE VARIANTS, ZERO VARIANTS, OR MISSING PRODUCT ROW ---
+            # Append all original rows in the group unchanged (as requested).
+            
+            # Append all rows from the current group, maintaining original order
+            for idx in group.index:
+                processed_rows.append(df.loc[idx].to_dict())
+
+
+    # Create the final DataFrame from the processed rows
+    df = pd.DataFrame(processed_rows)
+    df= df.reset_index(drop=True)
+
+
     # 4. Save to CSV
     df.to_csv(filename, index=False, header=True)
     print(f"Successfully saved {len(data_list)} rows to {filename}")
