@@ -45,6 +45,12 @@ if not os.path.exists(ARCHIVE_DIR):
 
 # --- 1. Main Export and Transformation Function ---
 
+VARIANT_COLS_TO_MERGE = [
+    'Variant SKU', 
+    'Variant Compare At Price', 
+    'Variant Price', 
+    'Variant Barcode'
+]
 
 COLUMN_RENAMES = {
     'title': 'Title',
