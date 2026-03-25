@@ -41,7 +41,7 @@ DB_CONFIG = {
 
 
 # TRUE - IF URL LIST .CSV FILE IS READY
-CSV_READY = False
+CSV_READY = True
 CSV = '../data/matt_and_max_url.csv'
 PROD_DEBUG_FILE = '../data/debug_matt_and_max.log'
 URL_DEBUG_FILE = '../data/debug_matt_and_max_url.log'
@@ -936,6 +936,11 @@ def scrape_products_all():
                     upc = upc_bl[0].select_one('div').text.strip()
                 else:
                     upc = ''
+
+                vendor = prod_soup.select_one('h2[class="font-navigation uppercase font-bold text-xl sm:text-2xl md:text-xl xl:text-2xl tracking-widest leading-tight"]').text.strip()
+                
+
+                    
                 
                 handle = create_url_handle(name, sku)
                 return { # Add product data as a single row
@@ -950,7 +955,7 @@ def scrape_products_all():
                     'Variant Barcode': upc,
                     'Variant Price': price,
                     'Variant Compare At Price': compare_at_price,
-                    'Vendor': 'Matt and Max',
+                    'Vendor': vendor,
                     'Handle': handle
                 }
             else:
@@ -985,7 +990,7 @@ def scrape_products_all():
         conn = psycopg2.connect(**DB_CONFIG)
         conn.autocommit = False  # Start a transaction
         cursor = conn.cursor()
-        print('check1')
+        
     except (Exception, psycopg2.Error) as error:
         print(f"Database Error: {error}", file=sys.stderr)
         if conn:
@@ -1018,6 +1023,7 @@ def scrape_products_all():
         
         
         if product and product['Title']:
+            
             db_status, product_id = upsert_product_data(product, [], cursor)
             conn.commit()
         
