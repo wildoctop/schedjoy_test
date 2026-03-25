@@ -153,7 +153,6 @@ def process_and_save_data(data_list: List[Dict[str, Any]], filename: str, final_
     # This also discards any columns not listed in FINAL_COLUMNS
     df = df.reindex(columns=FINAL_COLUMNS)
     df['Variant Image'] = df['Variant Image'].astype(str)
-    df['Title'] = df['Vendor'] + ' ' + df['Title']
     df['Variant Price'] = df['Variant Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Variant Compare At Price'] = df['Variant Compare At Price'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
     df['Cost per item'] = df['Cost per item'].astype(str).str.replace('$', '').str.replace(',', '').str.strip()
@@ -347,7 +346,7 @@ def export_and_manage_data():
                 price, cost, compare, upc, weight, weight_grams, published, status_int, 
                 debug_1, debug_2, debug_3
             FROM {} 
-            WHERE status_int IN {} AND vendor = {}
+            WHERE status_int IN {} AND debug_1 = {}
             ORDER BY product_id, sku;
         """).format(
             sql.Identifier(VARIANT_TABLE),

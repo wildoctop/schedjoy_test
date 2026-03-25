@@ -956,7 +956,9 @@ def scrape_products_all():
                     'Variant Price': price,
                     'Variant Compare At Price': compare_at_price,
                     'Vendor': vendor,
-                    'Handle': handle
+                    'Handle': handle,
+                    'debug_1': 'Matt and Max'
+
                 }
             else:
                 return { # Add product data as a single row
