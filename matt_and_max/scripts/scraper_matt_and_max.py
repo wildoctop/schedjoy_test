@@ -232,9 +232,17 @@ def upsert_single_variant(
             )
             ON CONFLICT (var_id) DO UPDATE SET 
                 var_image_url = EXCLUDED.var_image_url,
-                price = EXCLUDED.price, cost = EXCLUDED.cost, compare = EXCLUDED.compare,
-                upc = EXCLUDED.upc, weight = EXCLUDED.weight, published = EXCLUDED.published,
-                status = EXCLUDED.status;
+                price = EXCLUDED.price, 
+                cost = EXCLUDED.cost, 
+                compare = EXCLUDED.compare,
+                upc = EXCLUDED.upc, 
+                weight = EXCLUDED.weight, 
+                published = EXCLUDED.published,
+                status_int = EXCLUDED.status_int,
+                debug_1 = EXCLUDED.debug_1,  -- ADDED THIS
+                debug_2 = EXCLUDED.debug_2,  -- ADDED THIS
+                debug_3 = EXCLUDED.debug_3,  -- ADDED THIS
+                vendor = EXCLUDED.vendor;    -- ADDED THIS
         """).format(
             sql.Identifier(VARIANT_LOOKUP_TABLE),
             # Variant VALUES (using single product_data dict)
